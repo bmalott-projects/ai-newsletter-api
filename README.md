@@ -37,6 +37,8 @@ This workspace blocks committing dotfiles like `.env.example`, so use `env.examp
 cp env.example .env
 ```
 
+Your `.env` contains both **app settings** and **Postgres credentials** for Docker Compose.
+
 ### 2) Install Python dependencies
 
 Use any workflow you like. With `pip`:

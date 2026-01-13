@@ -3,13 +3,13 @@ services:
   api:
     build: .
     profiles: ["api"]
+    env_file:
+      - .env
     environment:
       # In compose, the DB host is the service name `db`, not localhost.
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/ai_newsletter
-      LOG_LEVEL: INFO
-      ENVIRONMENT: local
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}
     ports:
-      - "8000:8000"
+      - "${API_PORT}:${API_PORT}"
     depends_on:
       db:
         condition: service_healthy
@@ -23,22 +23,20 @@ services:
         "--host",
         "0.0.0.0",
         "--port",
-        "8000",
+        "${API_PORT}",
         "--reload",
       ]
 
   db:
     image: pgvector/pgvector:pg16
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ai_newsletter
+    env_file:
+      - .env
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_newsletter"]
+      test: ["CMD-SHELL", "pg_isready -U $DB_USER -d $DB_NAME"]
       interval: 5s
       timeout: 3s
       retries: 5
