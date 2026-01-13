@@ -66,7 +66,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 docker compose --profile api up -d --build
 ```
 
-### 6) Stop DB (and API if its running in docker)
+### 6) Stop DB (and API if it's running in docker)
 
 ```zsh
 docker compose --profile api down
