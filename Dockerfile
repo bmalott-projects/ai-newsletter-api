@@ -20,7 +20,12 @@ COPY app /app/app
 COPY alembic /app/alembic
 COPY alembic.ini /app/alembic.ini
 
+# Create unprivileged user and adjust ownership
+RUN groupadd -r appuser && useradd -r -g appuser appuser && chown -R appuser:appuser /app
+
 EXPOSE 8000
 
+# Run the application as the unprivileged user
+USER appuser
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
