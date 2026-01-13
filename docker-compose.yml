@@ -41,7 +41,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ai_newsletter"]
       interval: 5s
       timeout: 3s
-      retries: 20
+      retries: 5
 
 volumes:
   db_data:
