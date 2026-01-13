@@ -59,6 +59,12 @@ pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
 
+### Alternative: run API + DB via Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
 Health check:
 - `GET /api/health`
 

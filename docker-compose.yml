@@ -1,4 +1,21 @@
 services:
+  api:
+    build: .
+    environment:
+      # In compose, the DB host is the service name `db`, not localhost.
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/ai_newsletter
+      LOG_LEVEL: INFO
+      ENVIRONMENT: local
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Dev convenience: live-reload when you run with --reload
+      - ./app:/app/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
   db:
     image: pgvector/pgvector:pg16
     environment:
@@ -9,6 +26,11 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_newsletter"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
 volumes:
   db_data:
