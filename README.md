@@ -1,6 +1,6 @@
 # ai-newsletter-api (backend MVP)
 
-FastAPI backend for an LLM-driven tech newsletter app. This repo is intentionally scaffolded for a **testable MVP**:
+FastAPI backend for an LLM-driven tech newsletter app.
 
 - keep business logic out of routes
 - treat LLM calls as _stateless, schema-validated functions_
