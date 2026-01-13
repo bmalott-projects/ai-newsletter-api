@@ -11,6 +11,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Fallback values if there is no .env file
     app_name: str = "ai-newsletter-api"
     environment: str = "local"
     log_level: str = "INFO"
