@@ -16,8 +16,9 @@ class Settings(BaseSettings):
     environment: str = "local"
     log_level: str = "INFO"
 
-    database_url: PostgresDsn = "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_newsletter"
+    database_url: PostgresDsn = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_newsletter"
+    )
 
 
 settings = Settings()
-

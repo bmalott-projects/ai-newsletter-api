@@ -71,4 +71,3 @@ def run_migrations() -> None:
 
 
 run_migrations()
-

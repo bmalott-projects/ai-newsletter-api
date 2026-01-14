@@ -18,4 +18,3 @@ class Newsletter(Base):
 
     user = relationship("User", back_populates="newsletters")
     content_items = relationship("ContentItem", back_populates="newsletter")
-

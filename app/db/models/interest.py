@@ -15,4 +15,3 @@ class Interest(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user = relationship("User", back_populates="interests")
-

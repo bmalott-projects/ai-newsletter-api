@@ -17,4 +17,3 @@ class User(Base):
 
     interests = relationship("Interest", back_populates="user")
     newsletters = relationship("Newsletter", back_populates="user")
-
