@@ -5,17 +5,22 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import text
 
+from app.core.config import settings
 from app.db.session import engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """FastAPI lifespan context manager for startup/shutdown events."""
-    # Startup
-    await verify_database_connection()
-    yield
-    # Shutdown
-    await engine.dispose()
+    try:
+        # Startup
+        if settings.environment != "test":
+            await verify_database_connection()
+        yield
+
+        # Shutdown
+    finally:
+        await engine.dispose()
 
 
 async def verify_database_connection() -> None:
