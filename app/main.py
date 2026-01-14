@@ -1,13 +1,21 @@
+from importlib.metadata import version
+
 from fastapi import FastAPI
 
 from app.api.router import router as api_router
 from app.core.config import settings
-from app.core.logging import configure_logging
+from app.core.lifespan import lifespan
 
 
 def create_app() -> FastAPI:
-    configure_logging()
-    app = FastAPI(title=settings.app_name)
+    api_version = version("ai-newsletter-api")
+    is_debug_mode = settings.environment == "local"
+    app = FastAPI(
+        title=settings.app_name,
+        version=api_version,
+        debug=is_debug_mode,
+        lifespan=lifespan,
+    )
     app.include_router(api_router, prefix="/api")
     return app
 
