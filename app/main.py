@@ -1,8 +1,7 @@
+import logging
 from importlib.metadata import PackageNotFoundError, version
 
 from fastapi import FastAPI
-
-import logging
 
 from app.api.router import router as api_router
 from app.core.config import settings

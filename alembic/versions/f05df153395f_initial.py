@@ -7,7 +7,6 @@ Create Date: 2026-01-13 21:34:58.891078
 """
 
 from __future__ import annotations
-
 from typing import Sequence, Union
 
 from alembic import op

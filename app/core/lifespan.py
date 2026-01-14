@@ -1,10 +1,8 @@
 from __future__ import annotations
-
-from fastapi import FastAPI
-
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.db.session import engine
