@@ -12,7 +12,7 @@ def create_engine() -> AsyncEngine:
 
 
 engine = create_engine()
-SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+SessionLocal = async_sessionmaker[AsyncSession](bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
