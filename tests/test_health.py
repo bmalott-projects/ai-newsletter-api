@@ -1,13 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core import config
 from app.main import create_app
 
 
 def test_health(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that the health endpoint returns ok status."""
     # Set environment to test to skip database connection check in lifespan context manager
-    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setattr(config.settings, "environment", "test")
     app = create_app()
     client = TestClient(app)
     resp = client.get("/api/health")
