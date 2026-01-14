@@ -74,7 +74,27 @@ docker compose --profile api up -d --build
 docker compose --profile api down
 ```
 
-### 7) Run tests
+### 7) Run database migrations
+
+Create a new migration (after modifying models):
+
+```zsh
+alembic revision --autogenerate -m "description"
+```
+
+Apply migrations:
+
+```zsh
+alembic upgrade head
+```
+
+Downgrade one migration:
+
+```zsh
+alembic downgrade -1
+```
+
+### 8) Run tests
 
 ```zsh
 pytest

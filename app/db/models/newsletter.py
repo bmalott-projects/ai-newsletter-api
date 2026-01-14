@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, func
@@ -18,4 +17,3 @@ class Newsletter(Base):
 
     user = relationship("User", back_populates="newsletters")
     content_items = relationship("ContentItem", back_populates="newsletter")
-

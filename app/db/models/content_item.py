@@ -20,4 +20,3 @@ class ContentItem(Base):
     # (keeping MVP setup simple and migration-first)
 
     newsletter = relationship("Newsletter", back_populates="content_items")
-
