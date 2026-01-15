@@ -50,16 +50,16 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 
 ## Functional Requirements
 
-### MVP Scope (Current)
+### MVP Scope (Planned Roadmap)
 
-**Included:**
+**Planned MVP features (not yet fully implemented):**
 
-- ✅ Interest extraction & updates via natural language prompts
-- ✅ Explicit interest management (view/delete directly)
-- ✅ Manual newsletter generation for now (through API endpoint)
-- ✅ Newsletter persistence & retrieval
-- ✅ Basic content deduplication (URLs + embedding similarity)
-- ✅ Prompt regression tests
+- ⏳ Interest extraction & updates via natural language prompts
+- ⏳ Explicit interest management (view/delete directly)
+- ⏳ Manual newsletter generation for now (through API endpoint)
+- ⏳ Newsletter persistence & retrieval
+- ⏳ Basic content deduplication (URLs + embedding similarity)
+- ⏳ Prompt regression tests
 
 **Deferred (Future):**
 
