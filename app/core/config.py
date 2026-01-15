@@ -20,5 +20,13 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_newsletter"
     )
 
+    # OpenAI configuration
+    openai_api_key: str
+
+    # JWT configuration
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 30
+
 
 settings = Settings()
