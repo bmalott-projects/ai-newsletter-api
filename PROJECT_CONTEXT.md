@@ -18,11 +18,11 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 
 ### Directory Structure
 
-- **`app/api/`**: FastAPI routers (HTTP layer). Thin: validation + auth (later) + calls services.
+- **`app/api/`**: FastAPI routers (HTTP layer). Thin: validation + JWT auth + calls services.
 - **`app/services/`**: Business logic (interest parsing/apply, newsletter generation pipeline).
 - **`app/llm/`**: LLM client abstraction + prompts + output schemas (mockable for tests).
 - **`app/db/`**: SQLAlchemy models + async session management.
-- **`app/core/`**: Configuration, logging, lifespan (startup/shutdown).
+- **`app/core/`**: Configuration, logging, lifespan (startup/shutdown), and JWT authentication utilities.
 - **`alembic/`**: Database migrations (schema is migration-first).
 - **`tests/`**: API + service tests + (later) prompt regression tests.
 
@@ -32,6 +32,8 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 | ----------------------------------- | ------------------------------------------------------------------------------------------ |
 | **FastAPI**                         | Fast iteration, excellent Pydantic integration, async-first, auto-generated OpenAPI docs   |
 | **Pydantic v2 + pydantic-settings** | Strict schema validation (reused for LLM output guardrails), structured config from `.env` |
+| **JWT authentication**              | python-jose for JWT tokens, libpass for password hashing (stateless, scalable auth)        |
+| **OpenAI SDK**                      | LLM client for interest extraction and newsletter generation                               |
 | **SQLAlchemy 2 (async) + asyncpg**  | Production-grade Postgres with modern typed ORM, async support                             |
 | **Alembic**                         | Migration-first approach (required for pgvector columns/indexes), schema as code           |
 | **pgvector (extension + library)**  | Embedding similarity for deduplication without separate vector DB in MVP                   |
@@ -50,11 +52,12 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 
 ## Functional Requirements
 
-### MVP Scope (Planned Roadmap)
+### MVP Scope (Current)
 
-**Planned MVP features (not yet fully implemented):**
+**Included:**
 
-- ⏳ Interest extraction & updates via natural language prompts
+- ✅ Interest extraction & updates via natural language prompts
+- ✅ JWT authentication (user registration, login, protected routes)
 - ⏳ Explicit interest management (view/delete directly)
 - ⏳ Manual newsletter generation for now (through API endpoint)
 - ⏳ Newsletter persistence & retrieval
@@ -125,6 +128,8 @@ class Settings(BaseSettings):
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_DB`
 - `DATABASE_URL` (for local runs)
 - `API_PORT` (for Docker Compose)
+- `OPENAI_API_KEY` (OpenAI API key for LLM operations)
+- `JWT_SECRET_KEY` (Secret key for signing JWT tokens)
 
 ## Test Suite
 
@@ -160,6 +165,7 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 
 - **`app/main.py`**: FastAPI app factory, version from package metadata, lifespan integration
 - **`app/core/lifespan.py`**: Startup/shutdown (DB health check, engine disposal)
+- **`app/core/auth.py`**: JWT token creation/verification, password hashing utilities
 - **`app/db/session.py`**: Async SQLAlchemy engine + session management
 - **`alembic/env.py`**: Alembic configuration (async, reads from settings)
 - **`docker-compose.yml`**: Postgres (pgvector) + API service (profile-based)
