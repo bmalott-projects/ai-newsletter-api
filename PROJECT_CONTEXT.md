@@ -32,7 +32,7 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 | ----------------------------------- | ------------------------------------------------------------------------------------------ |
 | **FastAPI**                         | Fast iteration, excellent Pydantic integration, async-first, auto-generated OpenAPI docs   |
 | **Pydantic v2 + pydantic-settings** | Strict schema validation (reused for LLM output guardrails), structured config from `.env` |
-| **JWT authentication**              | python-jose for JWT tokens, libpass for password hashing (stateless, scalable auth)        |
+| **JWT authentication**              | python-jose for JWT tokens, passlib for password hashing (stateless, scalable auth)        |
 | **OpenAI SDK**                      | LLM client for interest extraction and newsletter generation                               |
 | **SQLAlchemy 2 (async) + asyncpg**  | Production-grade Postgres with modern typed ORM, async support                             |
 | **Alembic**                         | Migration-first approach (required for pgvector columns/indexes), schema as code           |
