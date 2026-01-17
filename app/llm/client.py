@@ -1,5 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+import json
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
@@ -47,8 +48,6 @@ class OpenAIClient(LLMClient):
                 raise ValueError("Empty response from OpenAI")
 
             # Parse and validate with Pydantic
-            import json
-
             parsed = json.loads(content)
             return InterestExtractionResult(**parsed)
 
