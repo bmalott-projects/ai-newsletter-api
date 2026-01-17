@@ -4,7 +4,15 @@ import json
 import logging
 
 from openai import AsyncOpenAI
+from openai import (
+    APIError,
+    APIConnectionError,
+    APITimeoutError,
+    RateLimitError,
+    AuthenticationError,
+)
 from openai.types.chat import ChatCompletion
+from pydantic import ValidationError
 
 from app.core.config import settings
 from app.llm.prompts import (
@@ -30,6 +38,33 @@ class OpenAIClient(LLMClient):
         """Initialize OpenAI client."""
         self.client = AsyncOpenAI(api_key=api_key or settings.openai_api_key)
 
+    def _handle_errors(self, error: Exception, prompt: str) -> None:
+        """Log error with appropriate message based on error type."""
+        if isinstance(error, APIConnectionError):
+            logging.error(f"OpenAI API connection failed for prompt: {prompt}. Error: {error}")
+        elif isinstance(error, APITimeoutError):
+            logging.error(f"OpenAI API request timed out for prompt: {prompt}. Error: {error}")
+        elif isinstance(error, RateLimitError):
+            logging.error(f"OpenAI API rate limit exceeded for prompt: {prompt}. Error: {error}")
+        elif isinstance(error, AuthenticationError):
+            logging.error(f"OpenAI API authentication failed for prompt: {prompt}. Error: {error}")
+        elif isinstance(error, APIError):
+            logging.error(f"OpenAI API error for prompt: {prompt}. Error: {error}")
+        elif isinstance(error, (IndexError, AttributeError)):
+            logging.error(
+                f"Unexpected response structure from OpenAI for prompt: {prompt}. Error: {error}"
+            )
+        elif isinstance(error, ValueError):
+            logging.error(f"Invalid value encountered for prompt: {prompt}. Error: {error}")
+        elif isinstance(error, json.JSONDecodeError):
+            logging.error(f"Invalid JSON response from OpenAI for prompt: {prompt}. Error: {error}")
+        elif isinstance(error, ValidationError):
+            logging.error(f"Pydantic validation failed for prompt: {prompt}. Error: {error}")
+        else:
+            logging.error(
+                f"Unexpected error extracting interests from prompt: {prompt}. Error: {error}"
+            )
+
     async def extract_interests(self, prompt: str) -> InterestExtractionResult:
         """Extract interests from a natural language prompt using OpenAI."""
         try:
@@ -53,6 +88,4 @@ class OpenAIClient(LLMClient):
             return InterestExtractionResult(**parsed)
 
         except Exception as e:
-            # Log error and re-raise with context
-            logging.error(f"LLM failed to extract interests from prompt: {prompt}. Error: {e}")
-            raise RuntimeError(f"Failed to extract interests from LLM: {e}") from e
+            self._handle_errors(e, prompt)
