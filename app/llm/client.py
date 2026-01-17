@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
+import logging
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
@@ -53,4 +54,5 @@ class OpenAIClient(LLMClient):
 
         except Exception as e:
             # Log error and re-raise with context
+            logging.error(f"LLM failed to extract interests from prompt: {prompt}. Error: {e}")
             raise RuntimeError(f"Failed to extract interests from LLM: {e}") from e
