@@ -22,7 +22,7 @@ Flutter client talks only to this API.
 
 - **FastAPI**: fast iteration, great Pydantic integration, async-first.
 - **Pydantic v2 + pydantic-settings**: strict schemas, structured config from env, guardrails for LLM outputs.
-- **JWT authentication**: python-jose for JWT tokens, libpass for password hashing (stateless auth).
+- **JWT authentication**: python-jose for JWT tokens, passlib for password hashing (stateless auth).
 - **OpenAI SDK**: LLM client for interest extraction and newsletter generation.
 - **SQLAlchemy 2 (async) + asyncpg**: production-grade Postgres support with modern typed ORM.
 - **Alembic**: migrations are the source of truth for schema (required once you add pgvector columns/indexes).
