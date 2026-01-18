@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.auth import get_current_user
 from app.db.models.user import User
@@ -15,7 +15,12 @@ router = APIRouter()
 class InterestExtractionRequest(BaseModel):
     """Request model for interest extraction."""
 
-    prompt: str
+    prompt: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Natural language prompt to extract interests from",
+    )
 
 
 @router.post("/extract", response_model=InterestExtractionResult)

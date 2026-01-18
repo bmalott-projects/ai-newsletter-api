@@ -22,15 +22,15 @@ router = APIRouter()
 class UserRegister(BaseModel):
     """Request model for user registration."""
 
-    email: EmailStr
+    email: EmailStr = Field(..., max_length=320, description="Valid email address")
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
 
 
 class UserLogin(BaseModel):
     """Request model for user login."""
 
-    email: EmailStr
-    password: str
+    email: EmailStr = Field(..., max_length=320, description="Valid email address")
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
 
 
 class Token(BaseModel):
