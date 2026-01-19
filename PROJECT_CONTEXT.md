@@ -19,10 +19,10 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 ### Directory Structure
 
 - **`app/api/`**: FastAPI routers (HTTP layer). Thin: validation + JWT auth + calls services.
-- **`app/services/`**: Business logic (interest parsing/apply, newsletter generation pipeline).
+- **`app/services/`**: Domain-specific business logic (user operations, interest extraction, newsletter generation). Contains business rules and orchestrates multiple components (DB, LLM, etc.).
 - **`app/llm/`**: LLM client abstraction + prompts + output schemas (mockable for tests).
 - **`app/db/`**: SQLAlchemy models + async session management.
-- **`app/core/`**: Configuration, logging, lifespan (startup/shutdown), and JWT authentication utilities.
+- **`app/core/`**: Infrastructure and cross-cutting utilities (configuration, logging, lifespan, password hashing, JWT token creation). Low-level utilities with NO business rules.
 - **`alembic/`**: Database migrations (schema is migration-first).
 - **`tests/`**: API + service tests + (later) prompt regression tests.
 
@@ -44,11 +44,28 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 ### Design Principles
 
 1. **Business logic stays out of routes** - Routes are thin, services handle logic
-2. **LLM calls are stateless** - All context passed explicitly, no implicit "memory"
-3. **Schema-validated LLM outputs** - Use Pydantic models to enforce structure
-4. **Multiple narrow prompts** - Not one giant prompt (testable, debuggable)
-5. **Content history is persistent** - Enables deduplication across newsletter issues
-6. **Migration-first schema** - Alembic migrations are source of truth
+2. **Separation of infrastructure and business logic** - Core layer provides utilities, services layer contains domain business rules
+3. **LLM calls are stateless** - All context passed explicitly, no implicit "memory"
+4. **Schema-validated LLM outputs** - Use Pydantic models to enforce structure
+5. **Multiple narrow prompts** - Not one giant prompt (testable, debuggable)
+6. **Content history is persistent** - Enables deduplication across newsletter issues
+7. **Migration-first schema** - Alembic migrations are source of truth
+
+### Core vs Services Layer
+
+**Core Layer (`app/core/`)** - Infrastructure & Cross-Cutting Utilities:
+- **Purpose**: Low-level utilities used across the entire application
+- **Characteristics**: No business rules, domain-agnostic, infrastructure concerns
+- **Examples**: Password hashing (`get_password_hash()`), JWT token creation (`create_access_token()`), configuration, logging
+- **Think of it as**: Tools in a toolbox - reusable utilities
+
+**Services Layer (`app/services/`)** - Domain Business Logic:
+- **Purpose**: Domain-specific business logic that orchestrates multiple components
+- **Characteristics**: Contains business rules, domain-specific, coordinates core utilities + DB + LLM
+- **Examples**: User registration (`register_user()`), authentication (`authenticate_user()`), interest extraction
+- **Think of it as**: Building something - uses tools to accomplish tasks with business rules
+
+**Relationship**: Services use Core utilities. For example, `register_user()` (service) calls `get_password_hash()` (core) to hash passwords before storing them.
 
 ## Functional Requirements
 

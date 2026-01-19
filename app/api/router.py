@@ -6,9 +6,16 @@ from app.api.interests import router as interests_router
 router = APIRouter()
 
 
+class HealthResponse(BaseModel):
+    """Response model for health check."""
+
+    status: str
+
+
 @router.get("/health", tags=["meta"])
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> HealthResponse:
+    """Check the health of the application."""
+    return HealthResponse(status="ok")
 
 
 # Include sub-routers

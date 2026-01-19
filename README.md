@@ -11,12 +11,23 @@ FastAPI backend for an LLM-driven tech newsletter app.
 Flutter client talks only to this API.
 
 - **`app/api/`**: HTTP layer (FastAPI routers). Thin: validation + JWT auth + calls services.
-- **`app/services/`**: business logic (interest parsing/apply, newsletter generation pipeline).
+- **`app/services/`**: Domain-specific business logic (user operations, interest extraction, newsletter generation). Contains business rules and orchestrates components.
 - **`app/llm/`**: LLM client abstraction + prompts + output schemas (mockable for tests).
-- **`app/core/`**: Configuration, logging, lifespan, and JWT authentication utilities.
+- **`app/core/`**: Infrastructure and cross-cutting utilities (configuration, logging, lifespan, password hashing, JWT tokens). Low-level utilities with no business rules.
 - **`app/db/`**: SQLAlchemy models + session management.
 - **`alembic/`**: migrations (DB schema is migration-first).
 - **`tests/`**: API + service tests + (later) prompt regression tests.
+
+### Core vs Services Layer
+
+**Core (`app/core/`)**: Infrastructure utilities used across the app
+- No business rules, just tools (e.g., `get_password_hash()`, `create_access_token()`)
+- Cross-cutting concerns (config, logging, auth primitives)
+
+**Services (`app/services/`)**: Domain business logic
+- Contains business rules (e.g., "can't register duplicate emails")
+- Orchestrates core utilities + DB + LLM to accomplish domain tasks
+- Services use Core utilities (e.g., `register_user()` calls `get_password_hash()`)
 
 ## Tech Stack
 

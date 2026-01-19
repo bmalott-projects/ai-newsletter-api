@@ -1,20 +1,20 @@
 from __future__ import annotations
-from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import (
-    create_access_token,
-    get_current_user,
-    get_password_hash,
-    verify_password,
-)
+from app.core.auth import create_access_token, get_current_user
 from app.core.config import settings
 from app.db.models.user import User
 from app.db.session import get_db
+from app.services.auth import (
+    InvalidCredentialsError,
+    UserAlreadyExistsError,
+    authenticate_user,
+    delete_user,
+    register_user,
+)
 
 router = APIRouter()
 
@@ -50,45 +50,38 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
+class DeleteUserResponse(BaseModel):
+    """Response model for user deletion."""
+
+    deleted_user_id: int
+
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)) -> UserResponse:
     """Register a new user."""
-    result = await db.execute(select(User).where(User.email == user_data.email))
-    existing_user = result.scalar_one_or_none()
-
-    if existing_user:
+    try:
+        new_user = await register_user(user_data.email, user_data.password, db)
+        return UserResponse.model_validate(new_user)
+    except UserAlreadyExistsError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
-        )
-
-    hashed_password = get_password_hash(user_data.password)
-    result = await db.execute(
-        insert(User).values(email=user_data.email, hashed_password=hashed_password).returning(User)
-    )
-    new_user = result.scalar_one()
-    await db.commit()
-
-    return UserResponse(id=new_user.id, email=new_user.email)
+            detail=str(e),
+        ) from e
 
 
 @router.post("/login", response_model=Token)
 async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)) -> Token:
     """Authenticate user and return JWT token."""
-    result = await db.execute(select(User).where(User.email == credentials.email))
-    user = result.scalar_one_or_none()
-
-    if user is None or not verify_password(credentials.password, user.hashed_password):
+    try:
+        user = await authenticate_user(credentials.email, credentials.password, db)
+    except InvalidCredentialsError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from e
 
-    access_token_expires = timedelta(minutes=settings.jwt_access_token_expire_minutes)
-    access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
-    )
+    access_token = create_access_token(data={"sub": str(user.id)})
 
     return Token(access_token=access_token)
 
@@ -96,13 +89,13 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)) -> T
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
     """Get current authenticated user information."""
-    return UserResponse(id=current_user.id, email=current_user.email)
+    return UserResponse.model_validate(current_user)
 
 
-@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/me", response_model=DeleteUserResponse)
 async def delete_me(
     current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
-) -> None:
+) -> DeleteUserResponse:
     """Delete the current authenticated user and all associated data."""
-    await db.execute(delete(User).where(User.id == current_user.id))
-    await db.commit()
+    deleted_id = await delete_user(current_user.id, db)
+    return DeleteUserResponse(deleted_user_id=deleted_id)
