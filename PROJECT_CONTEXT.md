@@ -135,19 +135,63 @@ class Settings(BaseSettings):
 
 **Location**: `tests/`
 
+### Testing Strategy
+
+The project follows a layered testing approach, testing each layer appropriately:
+
+| Layer | Test Type | Rationale |
+|-------|-----------|-----------|
+| **API Routes** (`app/api/`) | Integration tests (TestClient) | Test full HTTP flow, validation, authentication, and integration with services |
+| **Services** (`app/services/`) | Unit tests (mocked dependencies) | Test business logic in isolation without external dependencies |
+| **LLM Client** (`app/llm/`) | Unit tests (mocked OpenAI) | Test LLM integration and error handling without real API calls |
+| **Core Utils** (`app/core/`) | Unit tests | Test pure functions (password hashing, JWT operations) |
+| **Database Models** | Integration tests | Test relationships, constraints, and database operations |
+
 ### Testing Patterns
 
 - **Use `monkeypatch.setattr()`** on settings objects (not `setenv()`) because settings are instantiated at import time
 - **Mock at module level**: Patch `"app.core.lifespan.engine"` not `engine.connect` (read-only attributes)
 - **Async tests**: Use `@pytest.mark.asyncio` and `pytest-asyncio` (auto mode enabled)
 - **Test environment**: Set `settings.environment = "test"` to skip database connection checks
+- **API tests**: Use `TestClient` from `fastapi.testclient` for integration testing of endpoints
+- **Mock external services**: Always mock LLM clients, external APIs, and database in unit tests
 
-### Future Test Plans
+### What to Test
 
-- Prompt regression tests (fixed inputs → validated outputs)
-- API endpoint tests
-- Property tests (no missing sources, no repeated URLs)
-- Mock LLMs for CI
+**✅ Test (Integration Tests):**
+- API endpoints - Full HTTP request/response cycle, validation, authentication
+- Database operations - Model relationships, constraints, queries
+- End-to-end flows - Complete user workflows through the API
+
+**✅ Test (Unit Tests):**
+- Service layer business logic - With mocked dependencies (LLM, DB)
+- LLM client - Mock OpenAI responses, test error handling
+- Core utilities - Password hashing, JWT operations, pure functions
+- Input validation - Pydantic model validation
+
+**❌ Don't Test:**
+- Framework internals (FastAPI, SQLAlchemy core functionality)
+- Third-party library code
+- Simple pass-through functions without logic
+
+### Test Structure
+
+```
+tests/
+├── test_api_auth.py          # Integration: Full API endpoints (register, login, delete)
+├── test_api_interests.py     # Integration: Full API endpoints (extract interests)
+├── test_services_interest.py # Unit: Service layer with mocked LLM client
+├── test_llm_client.py        # Unit: LLM client with mocked OpenAI API
+├── test_core_auth.py         # Unit: Auth utilities (password hashing, JWT)
+└── test_health.py            # Integration: Simple health check endpoint
+```
+
+### Key Principles
+
+1. **Test behavior, not implementation** - Test that the API does what it should, not how it does it
+2. **Fast unit tests** - Mock external dependencies to keep tests fast and isolated
+3. **Integration tests for API** - Test the full stack to catch integration issues
+4. **Mock expensive operations** - Never call real LLM APIs or external services in tests
 
 ## How to Build & Run
 
