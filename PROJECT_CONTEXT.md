@@ -24,7 +24,10 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 - **`app/db/`**: SQLAlchemy models + async session management.
 - **`app/core/`**: Infrastructure and cross-cutting utilities (configuration, logging, lifespan, password hashing, JWT token creation). Low-level utilities with NO business rules.
 - **`alembic/`**: Database migrations (schema is migration-first).
-- **`tests/`**: API + service tests + (later) prompt regression tests.
+- **`tests/`**: Test suite organized by type:
+  - **`tests/integration/`**: Integration tests (full HTTP + database flows)
+  - **`tests/unit/`**: Unit tests (mocked dependencies, isolated functions)
+  - **`tests/conftest.py`**: Shared fixtures
 
 ### Tech Stack Choices & Rationale
 
@@ -39,7 +42,7 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 | **pgvector (extension + library)**  | Embedding similarity for deduplication without separate vector DB in MVP                   |
 | **PostgreSQL**                      | Relational DB + vector capabilities via pgvector extension (single database)               |
 | **pytest + httpx**                  | Fast API tests, async test support                                                         |
-| **ruff + black + mypy**             | Fast linting, consistent formatting, optional type checking                                |
+| **ruff + black + mypy**             | Fast linting, consistent formatting, **strict type checking** (type hints required)     |
 
 ### Design Principles
 
@@ -137,6 +140,7 @@ class Settings(BaseSettings):
 - Settings are instantiated at module import time (`settings = Settings()`)
 - `.env` file is automatically loaded (via `env_file=".env"`)
 - Environment variables override defaults
+- **Required fields validated on startup**
 - In tests, use `monkeypatch.setattr(config.settings, "environment", "test")` (not `setenv()`)
 
 **Environment variables** (see `env.example`):
@@ -195,12 +199,9 @@ The project follows a layered testing approach, testing each layer appropriately
 
 ```
 tests/
-├── test_api_auth.py          # Integration: Full API endpoints (register, login, delete)
-├── test_api_interests.py     # Integration: Full API endpoints (extract interests)
-├── test_services_interest.py # Unit: Service layer with mocked LLM client
-├── test_llm_client.py        # Unit: LLM client with mocked OpenAI API
-├── test_core_auth.py         # Unit: Auth utilities (password hashing, JWT)
-└── test_health.py            # Integration: Simple health check endpoint
+├── conftest.py                    # Shared fixtures (auto-discovered by all tests)
+├── integration/                   # Integration tests
+└── unit/                          # Unit tests
 ```
 
 ### Key Principles
@@ -227,12 +228,43 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 - **`app/main.py`**: FastAPI app factory, version from package metadata, lifespan integration
 - **`app/core/lifespan.py`**: Startup/shutdown (DB health check, engine disposal)
 - **`app/core/auth.py`**: JWT token creation/verification, password hashing utilities
+- **`app/core/config.py`**: Settings with validation (exits on missing required fields)
 - **`app/db/session.py`**: Async SQLAlchemy engine + session management
+- **`app/services/auth.py`**: User authentication business logic (register, login, delete)
+- **`app/api/auth.py`**: Thin HTTP layer for authentication endpoints
 - **`alembic/env.py`**: Alembic configuration (async, reads from settings)
 - **`docker-compose.yml`**: Postgres (pgvector) + API service (profile-based)
+- **`tests/conftest.py`**: Shared pytest fixtures (auto-discovered by all tests)
 
 ## Development Workflows
 
 - **Local API + Docker DB**: `docker compose up -d db` then `uvicorn app.main:app --reload`
 - **Full Docker stack**: `docker compose --profile api up -d --build`
 - **Migrations**: Modify models → `alembic revision --autogenerate -m "msg"` → `alembic upgrade head`
+- **Run tests**: `pytest` (all tests) or `pytest tests/integration/` (integration only)
+
+## Code Quality & Standards
+
+### Type Hints
+
+- **Required on all functions** (enforced by mypy: `disallow_untyped_defs = true`)
+- Use `from __future__ import annotations` in all Python files (allows forward references)
+- Tests are exempt from type hint requirements
+- Exception: `self` and `cls` parameters don't need type hints
+
+### Linting Rules
+
+- **Ruff**: Enforces PEP 8, type hints (ANN rules), code quality (B, PIE, SIM rules)
+- **MyPy**: Strict type checking with `disallow_untyped_defs = true`
+- **Black**: Code formatting (100 char line length)
+- **Ignored rules**: `B008` (FastAPI `Depends()` in argument defaults is intentional)
+
+### SQLAlchemy Async Patterns
+
+- **Use Core-style statements** for async operations: `select()`, `delete()`, `insert()`, `update()`
+- **Pattern**: `await db.execute(select(User).where(...))` or `await db.execute(delete(User).where(...))`
+- **Avoid**: `db.delete(obj)` or `db.query()` (old SQLAlchemy 1.x patterns, unreliable in async)
+
+### Editor Configuration
+
+- **Settings**: Configured in `.vscode/settings.json` for automatic formatting and linting
