@@ -5,7 +5,6 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import create_access_token, get_current_user
-from app.core.config import settings
 from app.db.models.user import User
 from app.db.session import get_db
 from app.services.auth import (

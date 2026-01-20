@@ -12,13 +12,9 @@ from app.db.models.user import User
 class UserAlreadyExistsError(Exception):
     """Raised when attempting to register a user that already exists."""
 
-    pass
-
 
 class InvalidCredentialsError(Exception):
     """Raised when login credentials are invalid."""
-
-    pass
 
 
 async def register_user(email: str, password: str, db: AsyncSession) -> User:

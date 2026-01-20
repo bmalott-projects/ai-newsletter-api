@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from app.api.auth import router as auth_router
 from app.api.interests import router as interests_router

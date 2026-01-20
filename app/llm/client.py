@@ -1,15 +1,16 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
+
 import json
 import logging
+from abc import ABC, abstractmethod
 
-from openai import AsyncOpenAI
 from openai import (
-    APIError,
     APIConnectionError,
+    APIError,
     APITimeoutError,
-    RateLimitError,
+    AsyncOpenAI,
     AuthenticationError,
+    RateLimitError,
 )
 from openai.types.chat import ChatCompletion
 from pydantic import ValidationError

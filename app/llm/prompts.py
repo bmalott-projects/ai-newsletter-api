@@ -1,5 +1,7 @@
 """Prompt templates for LLM interactions."""
 
+from __future__ import annotations
+
 INTEREST_EXTRACTION_SYSTEM_PROMPT = """You are an assistant that extracts structured interests from natural language prompts.
 
 Your task is to analyze a user's prompt and identify:

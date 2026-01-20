@@ -47,7 +47,33 @@ line-length = 100
 extend-exclude = ["alembic"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "UP",     # pyupgrade
+    "N",      # pep8-naming
+    "C90",    # mccabe complexity
+    "ANN",    # flake8-annotations (type hints)
+    "RUF",    # ruff-specific rules
+    "PIE",    # flake8-pie
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "ANN101",  # Missing type annotation for self
+    "ANN102",  # Missing type annotation for cls
+    "ANN201",  # Missing return type annotation for public function (too strict for __init__)
+    "ANN401",  # Dynamically typed expressions (Any) are disallowed (too strict)
+    "B008",    # Function calls in argument defaults (FastAPI Depends() is intentional)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -62,9 +88,18 @@ target-version = ["py312"]
 python_version = "3.12"
 warn_return_any = true
 warn_unused_ignores = true
-disallow_untyped_defs = false
+disallow_untyped_defs = true  # Require type hints on all functions
+disallow_incomplete_defs = true  # Require complete type hints
 no_implicit_optional = true
 check_untyped_defs = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_no_return = true
 mypy_path = "."
 plugins = []
+
+[tool.mypy.per-file-ignores]
+"tests/**" = ["no-untyped-def", "no-any-return"]  # Type hints optional in tests
+"alembic/**" = ["no-untyped-def"]  # Alembic files may not have type hints
 
