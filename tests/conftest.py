@@ -1,0 +1,164 @@
+"""Pytest configuration and shared fixtures for integration tests."""
+
+from __future__ import annotations
+
+import os
+from collections.abc import AsyncIterator
+from urllib.parse import urlparse
+
+import pytest
+import pytest_asyncio
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+from app.core import config
+from app.db.base import Base
+from app.db.session import get_db
+from app.main import create_app
+
+_default_db_url = str(config.settings.database_url).replace("/ai_newsletter", "/ai_newsletter_test")
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", _default_db_url)
+POSTGRES_URL = str(config.settings.database_url).replace("/ai_newsletter", "/postgres")
+
+
+"""
+Async tests fixtures (session-scoped, for async tests that need database access).
+"""
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def ensure_test_database() -> None:
+    """Ensures the test database exists, creating it if necessary."""
+    # Parse the test database URL to get the database name
+    parsed = urlparse(TEST_DATABASE_URL)
+    test_db_name = parsed.path.lstrip("/")
+
+    # Connect to the default 'postgres' database to create the test database
+    admin_engine = create_async_engine(
+        POSTGRES_URL, pool_pre_ping=True, echo=False, isolation_level="AUTOCOMMIT"
+    )
+
+    try:
+        async with admin_engine.connect() as conn:
+            # Check if database exists
+            result = await conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
+                {"db_name": test_db_name},
+            )
+            exists = result.scalar() is not None
+
+            if not exists:
+                # Create the database (must use autocommit for CREATE DATABASE)
+                await conn.execute(text(f'CREATE DATABASE "{test_db_name}"'))
+    finally:
+        # Use sync dispose to avoid event loop issues
+        admin_engine.sync_engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def test_engine() -> AsyncEngine:
+    """Creates a test database engine (reused across all tests)."""
+    engine = create_async_engine(TEST_DATABASE_URL, pool_pre_ping=True, echo=False)
+    yield engine
+    # Properly dispose async engine
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def setup_test_db(test_engine: AsyncEngine) -> None:
+    """Creates test database tables."""
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Cleanup: drop all tables after all tests
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest_asyncio.fixture(scope="session")
+async def test_session_maker(test_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    """Creates a session maker (reused across all tests)."""
+    return async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session(test_session_maker: async_sessionmaker[AsyncSession]) -> AsyncSession:
+    """Creates a database session for a test (function-scoped)."""
+    async with test_session_maker() as session:
+        yield session
+
+
+@pytest_asyncio.fixture(scope="session")
+async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> FastAPI:
+    """Creates FastAPI app for async tests with test database override.
+    It is reused across all tests that include it (session-scoped).
+
+    Uses session-scoped engine and session maker to avoid event loop conflicts
+    since AsyncClient runs in the same event loop as pytest-asyncio.
+    """
+    # Set test environment (directly modify settings since monkeypatch is function-scoped)
+    config.settings.environment = "test"
+    config.settings.database_url = TEST_DATABASE_URL
+
+    fastapi_app = create_app()
+
+    # Override the database dependency to use test database
+    # Reuse session-scoped session maker to avoid event loop conflicts with AsyncClient
+    async def override_get_db() -> AsyncIterator[AsyncSession]:
+        async with test_session_maker() as session:
+            yield session
+
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    yield fastapi_app
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_http_client(async_app: FastAPI) -> AsyncIterator[AsyncClient]:
+    """Creates an async http client."""
+    transport = ASGITransport(app=async_app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
+
+
+"""
+Synchronous tests fixtures (function-scoped, for synchronous tests that don't need database access).
+"""
+
+
+@pytest.fixture(scope="function")
+def app() -> FastAPI:
+    """Creates a FastAPI app for synchronous tests (function-scoped, no database dependency).
+
+    Use this for sync tests that don't need database access. Tests using this
+    can run in parallel since they don't share an event loop.
+    """
+    # Set test environment
+    config.settings.environment = "test"
+    config.settings.database_url = TEST_DATABASE_URL
+
+    fastapi_app = create_app()
+
+    # Mock the database dependency to prevent actual DB calls
+    # This allows sync tests to run without needing async fixtures
+    async def mock_get_db() -> AsyncIterator[AsyncSession]:
+        raise RuntimeError(
+            "Database dependency not available in sync tests. "
+            "Use async test with 'async_app' fixture for database access."
+        )
+
+    fastapi_app.dependency_overrides[get_db] = mock_get_db
+    return fastapi_app
+
+
+@pytest.fixture(scope="function")
+def http_client(app: FastAPI) -> TestClient:
+    """Creates a synchronous http client (for synchronous tests, can run in parallel)."""
+    return TestClient(app)
