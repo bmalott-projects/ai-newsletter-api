@@ -42,7 +42,7 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 | **pgvector (extension + library)**  | Embedding similarity for deduplication without separate vector DB in MVP                   |
 | **PostgreSQL**                      | Relational DB + vector capabilities via pgvector extension (single database)               |
 | **pytest + httpx**                  | Fast API tests, async test support                                                         |
-| **ruff + black + mypy**             | Fast linting, consistent formatting, **strict type checking** (type hints required)     |
+| **ruff (lint+format) + mypy**       | Fast linting, consistent formatting, **strict type checking** (type hints required)        |
 
 ### Design Principles
 
