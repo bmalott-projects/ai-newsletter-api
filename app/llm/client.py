@@ -90,3 +90,4 @@ class OpenAIClient(LLMClient):
 
         except Exception as e:
             self._handle_errors(e, prompt)
+            raise  # Re-raise exception after logging
