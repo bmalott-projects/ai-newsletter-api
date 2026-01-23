@@ -18,9 +18,8 @@ class Settings(BaseSettings):
     environment: str = "local"
     log_level: str = "INFO"
 
-    database_url: PostgresDsn = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_newsletter"
-    )
+    # Database configuration (required to prevent accidental connection to wrong database)
+    database_url: PostgresDsn = Field(..., description="Database connection URL (required)")
 
     # OpenAI configuration
     openai_api_key: str = Field(..., description="OpenAI API key (required)")
@@ -28,7 +27,9 @@ class Settings(BaseSettings):
     # JWT configuration
     jwt_secret_key: str = Field(..., description="JWT secret key for token signing (required)")
     jwt_algorithm: str = "HS256"
-    jwt_access_token_expire_minutes: int = 30
+    jwt_access_token_expire_minutes: int = Field(
+        ..., description="JWT token expiration in minutes (required)"
+    )
 
 
 def validate_settings() -> Settings:
