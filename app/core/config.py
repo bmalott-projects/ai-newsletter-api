@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-import sys
-
 from pydantic import Field, PostgresDsn, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class MissingRequiredSettingsError(Exception):
+    """Raised when required settings are missing."""
+
+    def __init__(self, missing_fields: list[str]) -> None:
+        """Initialize with list of missing field names."""
+        self.missing_fields = missing_fields
+        super().__init__(f"Missing required environment variables: {', '.join(missing_fields)}")
 
 
 class Settings(BaseSettings):
@@ -33,7 +40,12 @@ class Settings(BaseSettings):
 
 
 def validate_settings() -> Settings:
-    """Validate settings and provide helpful error messages for missing required fields."""
+    """Validate settings and raise exception for missing required fields.
+
+    Raises:
+        MissingRequiredSettingsError: If required environment variables are missing
+        ValidationError: For other validation errors
+    """
     try:
         return Settings()
     except ValidationError as e:
@@ -44,17 +56,12 @@ def validate_settings() -> Settings:
                 missing_fields.append(field_name.upper())
 
         if missing_fields:
-            print("ERROR: Missing required environment variables:", file=sys.stderr)
-            for field in missing_fields:
-                print(f"  - {field}", file=sys.stderr)
-            print(
-                "\nPlease set these in your .env file (see env.example for reference)",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+            raise MissingRequiredSettingsError(missing_fields) from e
 
         # Re-raise if it's a different validation error
         raise
 
 
+# Validate settings at import time.
+# Exceptions will propagate to the importing module (e.g., app/main.py)
 settings = validate_settings()
