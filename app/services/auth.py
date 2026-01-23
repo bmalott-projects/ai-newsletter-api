@@ -18,6 +18,10 @@ class InvalidCredentialsError(Exception):
     """Raised when login credentials are invalid."""
 
 
+class PasswordTooLongError(Exception):
+    """Raised when password exceeds the maximum allowed length (72 bytes)."""
+
+
 async def register_user(email: str, password: str, db: AsyncSession) -> User:
     """Register a new user.
 
@@ -31,6 +35,7 @@ async def register_user(email: str, password: str, db: AsyncSession) -> User:
 
     Raises:
         UserAlreadyExistsError: If email is already registered
+        PasswordTooLongError: If password exceeds 72 bytes when UTF-8 encoded
     """
     # Check if user already exists
     result = await db.execute(select(User).where(User.email == email))
@@ -40,7 +45,11 @@ async def register_user(email: str, password: str, db: AsyncSession) -> User:
         raise UserAlreadyExistsError("Email already registered")
 
     # Create new user
-    hashed_password = get_password_hash(password)
+    try:
+        hashed_password = get_password_hash(password)
+    except ValueError as e:
+        raise PasswordTooLongError("Password must not exceed 72 bytes when UTF-8 encoded") from e
+
     try:
         result = await db.execute(
             insert(User).values(email=email, hashed_password=hashed_password).returning(User)
@@ -78,6 +87,7 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> User
 
     Raises:
         InvalidCredentialsError: If email or password is incorrect
+        PasswordTooLongError: If password exceeds 72 bytes when UTF-8 encoded
     """
     # Find user by email
     result = await db.execute(select(User).where(User.email == email))
@@ -85,8 +95,8 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> User
 
     try:
         password_valid = user is not None and verify_password(password, user.hashed_password)
-    except ValueError:
-        password_valid = False
+    except ValueError as e:
+        raise PasswordTooLongError("Password must not exceed 72 bytes when UTF-8 encoded") from e
 
     if not password_valid:
         raise InvalidCredentialsError("Incorrect email or password")

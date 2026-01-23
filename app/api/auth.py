@@ -9,6 +9,7 @@ from app.db.models.user import User
 from app.db.session import get_db
 from app.services.auth import (
     InvalidCredentialsError,
+    PasswordTooLongError,
     UserAlreadyExistsError,
     authenticate_user,
     delete_user,
@@ -98,6 +99,11 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)) 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
+    except PasswordTooLongError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(e),
+        ) from e
 
 
 @router.post("/login", response_model=Token)
@@ -110,6 +116,11 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)) -> T
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
+        ) from e
+    except PasswordTooLongError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(e),
         ) from e
 
     access_token = create_access_token(data={"sub": str(user.id)})
