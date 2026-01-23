@@ -23,11 +23,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def get_password_hash(password: str) -> str:
     """Hash a password using bcrypt."""
+    # bcrypt only considers the first 72 bytes of the password; enforce this to avoid
+    # silent truncation and align with unit tests that expect a ValueError.
+    if len(password.encode("utf-8")) > 72:
+        raise ValueError("Password must not exceed 72 bytes when UTF-8 encoded.")
     return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
+    # Mirror the same 72-byte limit check used when hashing to avoid verifying
+    # truncated passwords as valid.
+    if len(plain_password.encode("utf-8")) > 72:
+        raise ValueError("Password must not exceed 72 bytes when UTF-8 encoded.")
     return pwd_context.verify(plain_password, hashed_password)
 
 
