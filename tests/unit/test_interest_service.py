@@ -79,3 +79,20 @@ async def test_extract_interests_only_adds() -> None:
     assert result.add_interests == ["Machine Learning"]
     assert result.remove_interests == []
     assert mock_client.last_prompt == prompt
+
+
+@pytest.mark.asyncio
+async def test_extract_interests_only_removes() -> None:
+    """Test interest extraction with only removals."""
+    # Arrange
+    expected_result = InterestExtractionResult(remove_interests=["JavaScript", "React"])
+    mock_client = MockLLMClient(result=expected_result)
+    prompt = "I'm no longer interested in JavaScript or React"
+
+    # Act
+    result = await extract_interests_from_prompt(prompt, mock_client)
+
+    # Assert
+    assert result.add_interests == []
+    assert result.remove_interests == ["JavaScript", "React"]
+    assert mock_client.last_prompt == prompt
