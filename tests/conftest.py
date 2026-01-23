@@ -109,9 +109,18 @@ async def test_session_maker(
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session(test_session_maker: async_sessionmaker[AsyncSession]) -> AsyncSession:
-    """Creates a database session for a test (function-scoped)."""
+    """Creates a database session for a test (function-scoped).
+    Ensures that any data created during a test does not leak into other tests
+    by deleting all rows from all tables after the test completes.
+    """
     async with test_session_maker() as session:
-        yield session
+        try:
+            yield session
+        finally:
+            # Cleanup: remove all data so tests remain isolated
+            for table in reversed(Base.metadata.sorted_tables):
+                await session.execute(table.delete())
+            await session.commit()
 
 
 @pytest_asyncio.fixture(scope="session")
