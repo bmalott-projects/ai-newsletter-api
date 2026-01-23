@@ -86,4 +86,4 @@ class OpenAIClient(LLMClient):
 
         except Exception as e:
             self._handle_errors(e, prompt)
-            return InterestExtractionResult()
+            raise  # Re-raise exception after logging
