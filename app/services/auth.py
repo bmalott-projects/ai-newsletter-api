@@ -83,7 +83,12 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> User
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
 
-    if user is None or not verify_password(password, user.hashed_password):
+    try:
+        password_valid = user is not None and verify_password(password, user.hashed_password)
+    except ValueError:
+        password_valid = False
+
+    if not password_valid:
         raise InvalidCredentialsError("Incorrect email or password")
 
     return user
