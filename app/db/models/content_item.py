@@ -10,7 +10,9 @@ class ContentItem(Base):
     __tablename__ = "content_items"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    newsletter_id: Mapped[int] = mapped_column(ForeignKey("newsletters.id"), index=True)
+    newsletter_id: Mapped[int] = mapped_column(
+        ForeignKey("newsletters.id", ondelete="CASCADE"), index=True
+    )
 
     interest: Mapped[str] = mapped_column(String(200), index=True)
     source_url: Mapped[str] = mapped_column(String(2048), unique=True, index=True)
