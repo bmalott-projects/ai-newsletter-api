@@ -24,11 +24,27 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
 
-_default_db_url = str(config.settings.database_url).replace("/ai_newsletter", "/ai_newsletter_test")
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", _default_db_url)
-POSTGRES_URL = str(config.settings.database_url).replace("/ai_newsletter", "/postgres")
+# Prefer an explicit TEST_DATABASE_URL from the environment.
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
+if not TEST_DATABASE_URL:
+    # Fall back to deriving a test database URL from the main database URL.
+    try:
+        base_db_url = str(config.settings.database_url)
+    except Exception as exc:
+        raise RuntimeError(
+            "TEST_DATABASE_URL is not set and config.settings.database_url "
+            "could not be loaded to derive a default test database URL."
+        ) from exc
 
+    parsed_base = urlparse(base_db_url)
+    base_db_name = parsed_base.path.lstrip("/") or "postgres"
+    test_db_name = f"{base_db_name}_test"
+    TEST_DATABASE_URL = parsed_base._replace(path=f"/{test_db_name}").geturl()
+
+# Derive an admin URL pointing at the 'postgres' database on the same server.
+_parsed_test = urlparse(TEST_DATABASE_URL)
+POSTGRES_URL = _parsed_test._replace(path="/postgres").geturl()
 """
 Async tests fixtures (session-scoped, for async tests that need database access).
 """
