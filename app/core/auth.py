@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -39,7 +40,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
     """Create a JWT access token."""
     to_encode = data.copy()
     if expires_delta:
@@ -51,7 +52,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return encoded_jwt
 
 
-def verify_token(token: str) -> dict | None:
+def verify_token(token: str) -> dict[str, Any] | None:
     """Verify and decode a JWT token."""
     try:
         payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
@@ -74,12 +75,12 @@ async def get_current_user(
     if payload is None:
         raise credentials_exception
 
-    user_id_str: str | None = payload.get("sub")
-    if user_id_str is None:
+    user_id_value = payload.get("sub")
+    if not isinstance(user_id_value, str):
         raise credentials_exception
 
     try:
-        user_id = int(user_id_str)
+        user_id = int(user_id_value)
     except (ValueError, TypeError):
         raise credentials_exception from None
 

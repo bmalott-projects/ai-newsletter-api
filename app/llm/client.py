@@ -39,7 +39,7 @@ class OpenAIClient(LLMClient):
         """Initialize OpenAI client."""
         self.client = AsyncOpenAI(api_key=api_key or settings.openai_api_key)
 
-    def _handle_errors(self, error: Exception, prompt: str) -> None:
+    def _handle_errors(self, error: Exception) -> None:
         """Log error with appropriate message based on error type."""
         if isinstance(error, APIConnectionError):
             logging.error(f"OpenAI API connection failed. Error: {error}")
@@ -85,5 +85,5 @@ class OpenAIClient(LLMClient):
             return InterestExtractionResult(**parsed)
 
         except Exception as e:
-            self._handle_errors(e, prompt)
+            self._handle_errors(e)
             raise  # Re-raise exception after logging

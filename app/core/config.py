@@ -47,13 +47,16 @@ def validate_settings() -> Settings:
         ValidationError: For other validation errors
     """
     try:
-        return Settings()
+        return Settings()  # type: ignore[call-arg]
     except ValidationError as e:
-        missing_fields = []
+        missing_fields: list[str] = []
         for error in e.errors():
             if error["type"] == "missing":
                 field_name = error["loc"][0] if error["loc"] else "unknown"
-                missing_fields.append(field_name.upper())
+                if isinstance(field_name, str):
+                    missing_fields.append(field_name.upper())
+                else:
+                    missing_fields.append(str(field_name).upper())
 
         if missing_fields:
             raise MissingRequiredSettingsError(missing_fields) from e

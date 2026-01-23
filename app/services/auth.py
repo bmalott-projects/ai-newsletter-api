@@ -89,12 +89,14 @@ async def authenticate_user(email: str, password: str, db: AsyncSession) -> User
         InvalidCredentialsError: If email or password is incorrect
         PasswordTooLongError: If password exceeds 72 bytes when UTF-8 encoded
     """
-    # Find user by email
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
 
+    if user is None:
+        raise InvalidCredentialsError("Incorrect email or password")
+
     try:
-        password_valid = user is not None and verify_password(password, user.hashed_password)
+        password_valid = verify_password(password, user.hashed_password)
     except ValueError as e:
         raise PasswordTooLongError("Password must not exceed 72 bytes when UTF-8 encoded") from e
 
