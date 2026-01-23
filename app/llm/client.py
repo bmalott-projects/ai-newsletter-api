@@ -42,29 +42,25 @@ class OpenAIClient(LLMClient):
     def _handle_errors(self, error: Exception, prompt: str) -> None:
         """Log error with appropriate message based on error type."""
         if isinstance(error, APIConnectionError):
-            logging.error(f"OpenAI API connection failed for prompt: {prompt}. Error: {error}")
+            logging.error(f"OpenAI API connection failed. Error: {error}")
         elif isinstance(error, APITimeoutError):
-            logging.error(f"OpenAI API request timed out for prompt: {prompt}. Error: {error}")
+            logging.error(f"OpenAI API request timed out. Error: {error}")
         elif isinstance(error, RateLimitError):
-            logging.error(f"OpenAI API rate limit exceeded for prompt: {prompt}. Error: {error}")
+            logging.error(f"OpenAI API rate limit exceeded. Error: {error}")
         elif isinstance(error, AuthenticationError):
-            logging.error(f"OpenAI API authentication failed for prompt: {prompt}. Error: {error}")
+            logging.error(f"OpenAI API authentication failed. Error: {error}")
         elif isinstance(error, APIError):
-            logging.error(f"OpenAI API error for prompt: {prompt}. Error: {error}")
+            logging.error(f"OpenAI API error. Error: {error}")
         elif isinstance(error, (IndexError, AttributeError)):
-            logging.error(
-                f"Unexpected response structure from OpenAI for prompt: {prompt}. Error: {error}"
-            )
+            logging.error(f"Unexpected response structure from OpenAI. Error: {error}")
         elif isinstance(error, json.JSONDecodeError):
-            logging.error(f"Invalid JSON response from OpenAI for prompt: {prompt}. Error: {error}")
+            logging.error(f"Invalid JSON response from OpenAI. Error: {error}")
         elif isinstance(error, ValidationError):
-            logging.error(f"Pydantic validation failed for prompt: {prompt}. Error: {error}")
+            logging.error(f"Pydantic validation failed. Error: {error}")
         elif isinstance(error, ValueError):
-            logging.error(f"Invalid value encountered for prompt: {prompt}. Error: {error}")
+            logging.error(f"Invalid value encountered. Error: {error}")
         else:
-            logging.error(
-                f"Unexpected error extracting interests from prompt: {prompt}. Error: {error}"
-            )
+            logging.error(f"Unexpected error extracting interests. Error: {error}")
 
     async def extract_interests(self, prompt: str) -> InterestExtractionResult:
         """Extract interests from a natural language prompt using OpenAI."""
@@ -90,4 +86,4 @@ class OpenAIClient(LLMClient):
 
         except Exception as e:
             self._handle_errors(e, prompt)
-            raise  # Re-raise exception after logging
+            return InterestExtractionResult()
