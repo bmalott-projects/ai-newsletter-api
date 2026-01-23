@@ -254,9 +254,8 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 
 ### Linting Rules
 
-- **Ruff**: Enforces PEP 8, type hints (ANN rules), code quality (B, PIE, SIM rules)
+- **Ruff**: Linting and formatting (enforces PEP 8, type hints (ANN rules), code quality (B, PIE, SIM rules))
 - **MyPy**: Strict type checking with `disallow_untyped_defs = true`
-- **Black**: Code formatting (100 char line length)
 - **Ignored rules**: `B008` (FastAPI `Depends()` in argument defaults is intentional)
 
 ### SQLAlchemy Async Patterns
