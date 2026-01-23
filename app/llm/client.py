@@ -55,12 +55,12 @@ class OpenAIClient(LLMClient):
             logging.error(
                 f"Unexpected response structure from OpenAI for prompt: {prompt}. Error: {error}"
             )
-        elif isinstance(error, ValueError):
-            logging.error(f"Invalid value encountered for prompt: {prompt}. Error: {error}")
         elif isinstance(error, json.JSONDecodeError):
             logging.error(f"Invalid JSON response from OpenAI for prompt: {prompt}. Error: {error}")
         elif isinstance(error, ValidationError):
             logging.error(f"Pydantic validation failed for prompt: {prompt}. Error: {error}")
+        elif isinstance(error, ValueError):
+            logging.error(f"Invalid value encountered for prompt: {prompt}. Error: {error}")
         else:
             logging.error(
                 f"Unexpected error extracting interests from prompt: {prompt}. Error: {error}"
