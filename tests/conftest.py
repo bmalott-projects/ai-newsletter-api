@@ -34,7 +34,7 @@ Async tests fixtures (session-scoped, for async tests that need database access)
 """
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="session")
 async def ensure_test_database() -> None:
     """Ensures the test database exists, creating it if necessary."""
     # Parse the test database URL to get the database name
@@ -63,8 +63,8 @@ async def ensure_test_database() -> None:
         admin_engine.sync_engine.dispose()
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def test_engine() -> AsyncEngine:
+@pytest_asyncio.fixture(scope="session")
+async def test_engine(ensure_test_database: None) -> AsyncEngine:
     """Creates a test database engine (reused across all tests)."""
     engine = create_async_engine(TEST_DATABASE_URL, pool_pre_ping=True, echo=False)
     yield engine
@@ -72,7 +72,7 @@ async def test_engine() -> AsyncEngine:
     await engine.dispose()
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="session")
 async def setup_test_db(test_engine: AsyncEngine) -> None:
     """Creates test database tables."""
     async with test_engine.begin() as conn:
@@ -84,7 +84,9 @@ async def setup_test_db(test_engine: AsyncEngine) -> None:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def test_session_maker(test_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+async def test_session_maker(
+    setup_test_db: None, test_engine: AsyncEngine
+) -> async_sessionmaker[AsyncSession]:
     """Creates a session maker (reused across all tests)."""
     return async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
