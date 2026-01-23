@@ -1,12 +1,28 @@
+from __future__ import annotations
+
 import logging
+import sys
 from importlib.metadata import PackageNotFoundError, version
 
 from fastapi import FastAPI
 
 from app.api.router import router as api_router
-from app.core.config import settings
+from app.core.config import MissingRequiredSettingsError
 from app.core.lifespan import lifespan
 from app.core.logging import configure_logging
+
+# Import settings - this may raise MissingRequiredSettingsError
+try:
+    from app.core.config import settings
+except MissingRequiredSettingsError as e:
+    print("ERROR: Missing required environment variables:", file=sys.stderr)
+    for field in e.missing_fields:
+        print(f"  - {field}", file=sys.stderr)
+    print(
+        "\nPlease set these in your .env file (see env.example for reference)",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def create_app() -> FastAPI:

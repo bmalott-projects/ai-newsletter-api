@@ -10,17 +10,31 @@ FastAPI backend for an LLM-driven tech newsletter app.
 
 Flutter client talks only to this API.
 
-- **`app/api/`**: HTTP layer (FastAPI routers). Thin: validation + auth later + calls services.
-- **`app/services/`**: business logic (interest parsing/apply, newsletter generation pipeline).
+- **`app/api/`**: HTTP layer (FastAPI routers). Thin: validation + JWT auth + calls services.
+- **`app/services/`**: Domain-specific business logic (user operations, interest extraction, newsletter generation). Contains business rules and orchestrates components.
 - **`app/llm/`**: LLM client abstraction + prompts + output schemas (mockable for tests).
+- **`app/core/`**: Infrastructure and cross-cutting utilities (configuration, logging, lifespan, password hashing, JWT tokens). Low-level utilities with no business rules.
 - **`app/db/`**: SQLAlchemy models + session management.
 - **`alembic/`**: migrations (DB schema is migration-first).
 - **`tests/`**: API + service tests + (later) prompt regression tests.
 
+### Core vs Services Layer
+
+**Core (`app/core/`)**: Infrastructure utilities used across the app
+- No business rules, just tools (e.g., `get_password_hash()`, `create_access_token()`)
+- Cross-cutting concerns (config, logging, auth primitives)
+
+**Services (`app/services/`)**: Domain business logic
+- Contains business rules (e.g., "can't register duplicate emails")
+- Orchestrates core utilities + DB + LLM to accomplish domain tasks
+- Services use Core utilities (e.g., `register_user()` calls `get_password_hash()`)
+
 ## Tech Stack
 
 - **FastAPI**: fast iteration, great Pydantic integration, async-first.
-- **Pydantic v2 + pydantic-settings**: strict schemas + structured config from env (guardrails for LLM outputs later too).
+- **Pydantic v2 + pydantic-settings**: strict schemas, structured config from env, guardrails for LLM outputs.
+- **JWT authentication**: python-jose for JWT tokens, passlib for password hashing (stateless auth).
+- **OpenAI SDK**: LLM client for interest extraction and newsletter generation.
 - **SQLAlchemy 2 (async) + asyncpg**: production-grade Postgres support with modern typed ORM.
 - **Alembic**: migrations are the source of truth for schema (required once you add pgvector columns/indexes).
 - **pgvector (library) + Postgres pgvector extension**: enables embedding similarity for deduplication without introducing a separate vector DB in the MVP.

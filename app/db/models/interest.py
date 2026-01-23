@@ -10,7 +10,7 @@ class Interest(Base):
     __tablename__ = "interests"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(200), index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
