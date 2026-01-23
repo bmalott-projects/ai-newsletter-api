@@ -5,8 +5,6 @@ These tests use a mocked LLM client to avoid real API calls and costs.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
-
 import pytest
 
 from app.llm.client import LLMClient
