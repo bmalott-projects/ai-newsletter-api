@@ -85,7 +85,7 @@ class TestPasswordHashing:
         too_long_password = "a" * 100
 
         # Should raise ValueError
-        with pytest.raises(ValueError, match="password cannot be longer than 72 bytes"):
+        with pytest.raises(ValueError, match="Password must not exceed 72 bytes"):
             get_password_hash(too_long_password)
 
 
