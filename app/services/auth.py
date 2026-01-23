@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sqlalchemy import delete, insert, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_password_hash, verify_password
@@ -40,11 +41,26 @@ async def register_user(email: str, password: str, db: AsyncSession) -> User:
 
     # Create new user
     hashed_password = get_password_hash(password)
-    result = await db.execute(
-        insert(User).values(email=email, hashed_password=hashed_password).returning(User)
-    )
-    new_user = result.scalar_one()
-    await db.commit()
+    try:
+        result = await db.execute(
+            insert(User).values(email=email, hashed_password=hashed_password).returning(User)
+        )
+        new_user = result.scalar_one()
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        # Check if it's a unique constraint violation on email
+        # asyncpg raises UniqueViolationError (error code 23505) for unique constraint violations
+        error_str = str(e.orig).lower()
+        if (
+            "unique" in error_str
+            or "duplicate" in error_str
+            or "23505" in str(e.orig)  # PostgreSQL unique violation error code
+            or "ix_users_email" in error_str  # Constraint name
+        ):
+            raise UserAlreadyExistsError("Email already registered") from e
+        # Re-raise if it's a different integrity error
+        raise
 
     return new_user
 
