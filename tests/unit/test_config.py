@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import importlib
 import sys
 from unittest.mock import patch
 
@@ -125,53 +126,59 @@ class TestSettingsValidation:
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("jwt_access_token_expire_minutes",) for error in errors)
 
-    def test_validate_settings_error_message(
-        self, test_settings_class: type[BaseSettings], monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_validate_settings_error_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that validate_settings provides helpful error messages."""
-        # Arrange: Remove all required env vars
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-        monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
-        monkeypatch.delenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", raising=False)
+        # Arrange: Reload the config module to get a fresh validate_settings function
+        # Patch sys.exit during reload to prevent actual exit
+        if "app.core.config" in sys.modules:
+            with patch("sys.exit"):
+                importlib.reload(sys.modules["app.core.config"])
 
-        # Act & Assert: Test validate_settings logic directly
-        def test_validate_settings() -> BaseSettings:
-            """Test version of validate_settings."""
-            try:
-                return test_settings_class()
-            except ValidationError as e:
-                missing_fields = []
-                for error in e.errors():
-                    if error["type"] == "missing":
-                        field_name = error["loc"][0] if error["loc"] else "unknown"
-                        missing_fields.append(field_name.upper())
+        from app.core import config
 
-                if missing_fields:
-                    print("ERROR: Missing required environment variables:", file=sys.stderr)
-                    for field in missing_fields:
-                        print(f"  - {field}", file=sys.stderr)
-                    print(
-                        "\nPlease set these in your .env file (see env.example for reference)",
-                        file=sys.stderr,
-                    )
-                    sys.exit(1)
-                raise
+        # Prevent Settings from reading .env file by patching model_config
+        original_model_config = config.Settings.model_config
+        config.Settings.model_config = {
+            **original_model_config,
+            "env_file": None,  # Disable .env file loading
+        }
 
-        with patch("sys.exit") as mock_exit, patch("builtins.print") as mock_print:
-            with contextlib.suppress(SystemExit, ValidationError):
-                test_validate_settings()
+        try:
+            # Act & Assert: Test the real validate_settings function
+            # Patch sys.exit using string path to ensure we patch the right reference
+            with (
+                patch("app.core.config.sys.exit") as mock_exit,
+                patch("builtins.print") as mock_print,
+            ):
+                with contextlib.suppress(SystemExit, ValidationError):
+                    config.validate_settings()
 
-            # Verify sys.exit was called (if ValidationError was caught and handled)
-            if mock_exit.called:
+                # Verify sys.exit was called with code 1
                 mock_exit.assert_called_once_with(1)
+
+                # Verify error messages were printed
+                print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any(
+                    "Missing required environment variables" in str(call) for call in print_calls
+                )
+                # Verify that missing fields are listed
+                assert any(
+                    "DATABASE_URL" in str(call) or "database_url" in str(call).upper()
+                    for call in print_calls
+                )
+        finally:
+            # Restore original model_config
+            config.Settings.model_config = original_model_config
 
             # Verify error messages were printed
             print_calls = [str(call) for call in mock_print.call_args_list]
-            # Either sys.exit was called (meaning validate_settings handled it)
-            # or ValidationError was raised (which is also valid - means validation works)
-            assert mock_exit.called or any(
+            assert any(
                 "Missing required environment variables" in str(call) for call in print_calls
+            )
+            # Verify that missing fields are listed
+            assert any(
+                "DATABASE_URL" in str(call) or "database_url" in str(call).upper()
+                for call in print_calls
             )
 
     def test_settings_optional_fields_have_defaults(
