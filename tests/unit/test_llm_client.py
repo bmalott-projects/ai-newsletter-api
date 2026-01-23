@@ -173,7 +173,6 @@ async def test_extract_interests_rate_limit_error(
 ) -> None:
     """Test handling of rate limit error."""
     # Arrange - RateLimitError requires response and body
-    from unittest.mock import MagicMock
 
     mock_response = MagicMock()
     mock_openai_client.chat.completions.create = AsyncMock(
@@ -191,8 +190,6 @@ async def test_extract_interests_authentication_error(
 ) -> None:
     """Test handling of authentication error."""
     # Arrange - AuthenticationError requires response and body
-    from unittest.mock import MagicMock
-
     mock_response = MagicMock()
     mock_openai_client.chat.completions.create = AsyncMock(
         side_effect=AuthenticationError(message="Auth failed", response=mock_response, body={})
