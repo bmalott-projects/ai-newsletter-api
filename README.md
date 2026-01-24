@@ -21,10 +21,12 @@ Flutter client talks only to this API.
 ### Core vs Services Layer
 
 **Core (`app/core/`)**: Infrastructure utilities used across the app
+
 - No business rules, just tools (e.g., `get_password_hash()`, `create_access_token()`)
 - Cross-cutting concerns (config, logging, auth primitives)
 
 **Services (`app/services/`)**: Domain business logic
+
 - Contains business rules (e.g., "can't register duplicate emails")
 - Orchestrates core utilities + DB + LLM to accomplish domain tasks
 - Services use Core utilities (e.g., `register_user()` calls `get_password_hash()`)
@@ -72,11 +74,6 @@ docker compose -f docker-compose.local.yml up -d db
 
 ### 4) Run API locally (debugging)
 
-**Option A: Using VSCode launch configuration (recommended)**
-- Use the "API (local) + DB (compose)" launch configuration
-- This runs the API locally with debugger support and auto-starts the DB
-
-**Option B: Manual command**
 ```zsh
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -90,6 +87,7 @@ docker compose -f docker-compose.local.yml --profile api up -d --build
 ```
 
 This configuration includes:
+
 - Volume mounts for live code changes
 - `--reload` flag for automatic server restart on file changes
 - PYTHONPATH override to import from mounted volume
@@ -103,6 +101,7 @@ docker compose -f docker-compose.prod.yml --profile api up -d --build
 ```
 
 This configuration:
+
 - Uses code baked into the Docker image (no volume mounts)
 - No `--reload` flag (production-optimized)
 - Uses installed package (no PYTHONPATH override)
