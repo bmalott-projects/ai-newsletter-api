@@ -67,28 +67,57 @@ pip install -e ".[dev]"
 ### 3) Start DB in Docker
 
 ```zsh
-docker compose up -d db
+docker compose -f docker-compose.local.yml up -d db
 ```
 
 ### 4) Run API locally (debugging)
 
+**Option A: Using VSCode launch configuration (recommended)**
+- Use the "API (local) + DB (compose)" launch configuration
+- This runs the API locally with debugger support and auto-starts the DB
+
+**Option B: Manual command**
 ```zsh
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 5) Start both DB and API in Docker
+### 5) Start both DB and API in Docker (Development)
+
+For local development with live reloading:
 
 ```zsh
-docker compose --profile api up -d --build
+docker compose -f docker-compose.local.yml --profile api up -d --build
 ```
 
-### 6) Stop DB (and API if it's running in docker)
+This configuration includes:
+- Volume mounts for live code changes
+- `--reload` flag for automatic server restart on file changes
+- PYTHONPATH override to import from mounted volume
+
+### 6) Start both DB and API in Docker (Production)
+
+For production deployment:
 
 ```zsh
-docker compose --profile api down
+docker compose -f docker-compose.prod.yml --profile api up -d --build
 ```
 
-### 7) Run database migrations
+This configuration:
+- Uses code baked into the Docker image (no volume mounts)
+- No `--reload` flag (production-optimized)
+- Uses installed package (no PYTHONPATH override)
+
+### 7) Stop services
+
+```zsh
+# Stop dev services
+docker compose -f docker-compose.local.yml --profile api down
+
+# Stop prod services
+docker compose -f docker-compose.prod.yml --profile api down
+```
+
+### 8) Run database migrations
 
 Create a new migration (after modifying models):
 
@@ -108,7 +137,7 @@ Downgrade one migration:
 alembic downgrade -1
 ```
 
-### 8) Run tests
+### 9) Run tests
 
 ```zsh
 pytest

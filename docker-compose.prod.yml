@@ -1,4 +1,5 @@
 name: ai-newsletter
+
 services:
   api:
     build: .
@@ -13,19 +14,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      # Dev convenience: live-reload when you run with --reload
-      - ./app:/app/app
-    command:
-      [
-        "uvicorn",
-        "app.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "${API_PORT}",
-        "--reload",
-      ]
 
   db:
     image: pgvector/pgvector:pg16
