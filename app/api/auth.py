@@ -59,7 +59,7 @@ class UserLogin(BaseModel):
     def validate_password_length(cls, v: str) -> str:
         """Validate that password does not exceed 72 bytes when UTF-8 encoded.
 
-        Note: We use a 60 character limit to ensure we stay under the 72-byte
+        Note: We use a 50 character limit to ensure we stay under the 72-byte
         bcrypt limit even with multi-byte UTF-8 characters.
         """
         if len(v.encode("utf-8")) > 72:
