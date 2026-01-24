@@ -100,12 +100,6 @@ For production deployment:
 docker compose -f docker-compose.prod.yml --profile api up -d --build
 ```
 
-This configuration:
-
-- Uses code baked into the Docker image (no volume mounts)
-- No `--reload` flag (production-optimized)
-- Uses installed package (no PYTHONPATH override)
-
 ### 7) Stop services
 
 ```zsh
