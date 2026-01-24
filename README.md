@@ -39,7 +39,7 @@ Flutter client talks only to this API.
 - **Alembic**: migrations are the source of truth for schema (required once you add pgvector columns/indexes).
 - **pgvector (library) + Postgres pgvector extension**: enables embedding similarity for deduplication without introducing a separate vector DB in the MVP.
 - **pytest + httpx**: fast API tests
-- **ruff + mypy (optional)**: quick linting + type checks to keep the codebase maintainable.
+- **ruff + basedpyright**: quick linting + type checks to keep the codebase maintainable.
 
 ## Local setup
 

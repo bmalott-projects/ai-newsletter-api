@@ -42,7 +42,7 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 | **pgvector (extension + library)**  | Embedding similarity for deduplication without separate vector DB in MVP                   |
 | **PostgreSQL**                      | Relational DB + vector capabilities via pgvector extension (single database)               |
 | **pytest + httpx**                  | Fast API tests, async test support                                                         |
-| **ruff (lint+format) + mypy**       | Fast linting, consistent formatting, **strict type checking** (type hints required)        |
+| **ruff (lint+format) + basedpyright** | Fast linting, consistent formatting, **strict type checking** (type hints required)      |
 
 ### Design Principles
 
@@ -137,10 +137,10 @@ class Settings(BaseSettings):
 
 **Key points:**
 
-- Settings are instantiated at module import time (`settings = Settings()`)
+- Settings are instantiated at module import time (`settings = validate_settings()`)
 - `.env` file is automatically loaded (via `env_file=".env"`)
 - Environment variables override defaults
-- **Required fields validated on startup**
+- **Required fields validated on startup**, raising `MissingRequiredSettingsError` and exiting in the app entrypoint
 - In tests, use `monkeypatch.setattr(config.settings, "environment", "test")` (not `setenv()`)
 
 **Environment variables** (see `env.example`):
@@ -162,7 +162,7 @@ The project follows a layered testing approach, testing each layer appropriately
 
 | Layer | Test Type | Rationale |
 |-------|-----------|-----------|
-| **API Routes** (`app/api/`) | Integration tests (TestClient) | Test full HTTP flow, validation, authentication, and integration with services |
+| **API Routes** (`app/api/`) | Integration tests (httpx) | Test full HTTP flow, validation, authentication, and integration with services |
 | **Services** (`app/services/`) | Unit tests (mocked dependencies) | Test business logic in isolation without external dependencies |
 | **LLM Client** (`app/llm/`) | Unit tests (mocked OpenAI) | Test LLM integration and error handling without real API calls |
 | **Core Utils** (`app/core/`) | Unit tests | Test pure functions (password hashing, JWT operations) |
@@ -174,7 +174,7 @@ The project follows a layered testing approach, testing each layer appropriately
 - **Mock at module level**: Patch `"app.core.lifespan.engine"` not `engine.connect` (read-only attributes)
 - **Async tests**: Use `@pytest.mark.asyncio` and `pytest-asyncio` (auto mode enabled)
 - **Test environment**: Set `settings.environment = "test"` to skip database connection checks
-- **API tests**: Use `TestClient` from `fastapi.testclient` for integration testing of endpoints
+- **API tests**: Use `httpx.AsyncClient` + `ASGITransport` for integration testing of endpoints
 - **Mock external services**: Always mock LLM clients, external APIs, and database in unit tests
 
 ### What to Test
@@ -228,7 +228,7 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 - **`app/main.py`**: FastAPI app factory, version from package metadata, lifespan integration
 - **`app/core/lifespan.py`**: Startup/shutdown (DB health check, engine disposal)
 - **`app/core/auth.py`**: JWT token creation/verification, password hashing utilities
-- **`app/core/config.py`**: Settings with validation (exits on missing required fields)
+- **`app/core/config.py`**: Settings with validation (raises on missing required fields; entrypoint exits)
 - **`app/db/session.py`**: Async SQLAlchemy engine + session management
 - **`app/services/auth.py`**: User authentication business logic (register, login, delete)
 - **`app/api/auth.py`**: Thin HTTP layer for authentication endpoints
@@ -247,15 +247,14 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 
 ### Type Hints
 
-- **Required on all functions** (enforced by mypy: `disallow_untyped_defs = true`)
+- **Required on all functions** (enforced by basedpyright in strict mode)
 - Use `from __future__ import annotations` in all Python files (allows forward references)
-- Tests are exempt from type hint requirements
 - Exception: `self` and `cls` parameters don't need type hints
 
 ### Linting Rules
 
 - **Ruff**: Linting and formatting (enforces PEP 8, type hints (ANN rules), code quality (B, PIE, SIM rules))
-- **MyPy**: Strict type checking with `disallow_untyped_defs = true`
+- **BasedPyright**: Strict type checking (Pyright config in `pyproject.toml`)
 - **Ignored rules**: `B008` (FastAPI `Depends()` in argument defaults is intentional)
 
 ### SQLAlchemy Async Patterns
