@@ -69,7 +69,7 @@ jobs:
 
       - name: Wait for PostgreSQL
         run: |
-          python -c "
+          .venv/bin/python -c "
           import asyncio
           import asyncpg
           import sys
