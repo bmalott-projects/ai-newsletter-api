@@ -12,6 +12,13 @@ from app.core.config import settings
 from app.db import models as _models  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from app.db.base import Base
 
+
+def _ensure_models_imported() -> None:
+    # Ensure _models is referenced so the import is treated as used by static analyzers.
+    _ = _models
+
+
+_ensure_models_imported()
 # Alembic Config object
 config = context.config
 
