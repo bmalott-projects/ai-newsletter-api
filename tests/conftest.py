@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncIterator
+from typing import cast
 from urllib.parse import urlparse
 
 import pytest
@@ -11,6 +12,7 @@ import pytest_asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from pydantic import PostgresDsn
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -24,10 +26,13 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
 
-# Prefer an explicit TEST_DATABASE_URL from the environment.
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
-if not TEST_DATABASE_URL:
+def _get_test_database_url() -> str:
+    """Resolve the test database URL from env or default derivation."""
+    env_url = os.getenv("TEST_DATABASE_URL")
+    if env_url:
+        return env_url
+
     # Fall back to deriving a test database URL from the main database URL.
     try:
         base_db_url = str(config.settings.database_url)
@@ -40,26 +45,28 @@ if not TEST_DATABASE_URL:
     parsed_base = urlparse(base_db_url)
     base_db_name = parsed_base.path.lstrip("/") or "postgres"
     test_db_name = f"{base_db_name}_test"
-    TEST_DATABASE_URL = parsed_base._replace(path=f"/{test_db_name}").geturl()
+    return parsed_base._replace(path=f"/{test_db_name}").geturl()
 
-# Derive an admin URL pointing at the 'postgres' database on the same server.
-_parsed_test = urlparse(TEST_DATABASE_URL)
-POSTGRES_URL = _parsed_test._replace(path="/postgres").geturl()
-"""
-Async tests fixtures (session-scoped, for async tests that need database access).
-"""
+
+# Prefer an explicit test database URL from the environment.
+test_database_url = _get_test_database_url()
+
+_parsed_test = urlparse(test_database_url)
+postgres_url = _parsed_test._replace(path="/postgres").geturl()
+
+# Async fixtures (session-scoped, for async tests that need database access).
 
 
 @pytest_asyncio.fixture(scope="session")
 async def ensure_test_database() -> None:
     """Ensures the test database exists, creating it if necessary."""
     # Parse the test database URL to get the database name
-    parsed = urlparse(TEST_DATABASE_URL)
+    parsed = urlparse(test_database_url)
     test_db_name = parsed.path.lstrip("/")
 
     # Connect to the default 'postgres' database to create the test database
     admin_engine = create_async_engine(
-        POSTGRES_URL, pool_pre_ping=True, echo=False, isolation_level="AUTOCOMMIT"
+        postgres_url, pool_pre_ping=True, echo=False, isolation_level="AUTOCOMMIT"
     )
 
     try:
@@ -80,16 +87,16 @@ async def ensure_test_database() -> None:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def test_engine(ensure_test_database: None) -> AsyncEngine:
+async def test_engine(ensure_test_database: None) -> AsyncIterator[AsyncEngine]:
     """Creates a test database engine (reused across all tests)."""
-    engine = create_async_engine(TEST_DATABASE_URL, pool_pre_ping=True, echo=False)
+    engine = create_async_engine(test_database_url, pool_pre_ping=True, echo=False)
     yield engine
     # Properly dispose async engine
     await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="session")
-async def setup_test_db(test_engine: AsyncEngine) -> None:
+async def setup_test_db(test_engine: AsyncEngine) -> AsyncIterator[None]:
     """Creates test database tables."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -108,7 +115,9 @@ async def test_session_maker(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session(test_session_maker: async_sessionmaker[AsyncSession]) -> AsyncSession:
+async def db_session(
+    test_session_maker: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[AsyncSession]:
     """Creates a database session for a test (function-scoped).
     Ensures that any data created during a test does not leak into other tests
     by deleting all rows from all tables after the test completes.
@@ -124,7 +133,7 @@ async def db_session(test_session_maker: async_sessionmaker[AsyncSession]) -> As
 
 
 @pytest_asyncio.fixture(scope="session")
-async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> FastAPI:
+async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> AsyncIterator[FastAPI]:
     """Creates FastAPI app for async tests with test database override.
     It is reused across all tests that include it (session-scoped).
 
@@ -133,7 +142,7 @@ async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> Fas
     """
     # Set test environment (directly modify settings since monkeypatch is function-scoped)
     config.settings.environment = "test"
-    config.settings.database_url = TEST_DATABASE_URL
+    config.settings.database_url = cast(PostgresDsn, test_database_url)
 
     fastapi_app = create_app()
 
@@ -155,9 +164,7 @@ async def async_http_client(async_app: FastAPI) -> AsyncIterator[AsyncClient]:
         yield client
 
 
-"""
-Synchronous tests fixtures (function-scoped, for synchronous tests that don't need database access).
-"""
+# Synchronous fixtures (function-scoped, for synchronous tests that don't need database access)
 
 
 @pytest.fixture(scope="function")
@@ -169,7 +176,7 @@ def app() -> FastAPI:
     """
     # Set test environment
     config.settings.environment = "test"
-    config.settings.database_url = TEST_DATABASE_URL
+    config.settings.database_url = cast(PostgresDsn, test_database_url)
 
     fastapi_app = create_app()
 

@@ -1,5 +1,8 @@
 # ai-newsletter-api (backend MVP)
 
+[![CI PR Checks](https://github.com/bmalott-projects/ai-newsletter-api/actions/workflows/ci-pr.yml/badge.svg)](https://github.com/bmalott-projects/ai-newsletter-api/actions/workflows/ci-pr.yml)
+[![CI Main Checks](https://github.com/bmalott-projects/ai-newsletter-api/actions/workflows/ci-main.yml/badge.svg)](https://github.com/bmalott-projects/ai-newsletter-api/actions/workflows/ci-main.yml)
+
 FastAPI backend for an LLM-driven tech newsletter app.
 
 - keep business logic out of routes
@@ -21,10 +24,12 @@ Flutter client talks only to this API.
 ### Core vs Services Layer
 
 **Core (`app/core/`)**: Infrastructure utilities used across the app
+
 - No business rules, just tools (e.g., `get_password_hash()`, `create_access_token()`)
 - Cross-cutting concerns (config, logging, auth primitives)
 
 **Services (`app/services/`)**: Domain business logic
+
 - Contains business rules (e.g., "can't register duplicate emails")
 - Orchestrates core utilities + DB + LLM to accomplish domain tasks
 - Services use Core utilities (e.g., `register_user()` calls `get_password_hash()`)
@@ -39,7 +44,7 @@ Flutter client talks only to this API.
 - **Alembic**: migrations are the source of truth for schema (required once you add pgvector columns/indexes).
 - **pgvector (library) + Postgres pgvector extension**: enables embedding similarity for deduplication without introducing a separate vector DB in the MVP.
 - **pytest + httpx**: fast API tests
-- **ruff + mypy (optional)**: quick linting + type checks to keep the codebase maintainable.
+- **ruff + basedpyright**: quick linting + type checks to keep the codebase maintainable.
 
 ## Local setup
 
@@ -67,7 +72,7 @@ pip install -e ".[dev]"
 ### 3) Start DB in Docker
 
 ```zsh
-docker compose up -d db
+docker compose -f docker-compose.local.yml up -d db
 ```
 
 ### 4) Run API locally (debugging)
@@ -76,19 +81,39 @@ docker compose up -d db
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 5) Start both DB and API in Docker
+### 5) Start both DB and API in Docker (Development)
+
+For local development with live reloading:
 
 ```zsh
-docker compose --profile api up -d --build
+docker compose -f docker-compose.local.yml --profile api up -d --build
 ```
 
-### 6) Stop DB (and API if it's running in docker)
+This configuration includes:
+
+- Volume mounts for live code changes
+- `--reload` flag for automatic server restart on file changes
+- PYTHONPATH override to import from mounted volume
+
+### 6) Start both DB and API in Docker (Production)
+
+For production deployment:
 
 ```zsh
-docker compose --profile api down
+docker compose -f docker-compose.prod.yml --profile api up -d --build
 ```
 
-### 7) Run database migrations
+### 7) Stop services
+
+```zsh
+# Stop dev services
+docker compose -f docker-compose.local.yml --profile api down
+
+# Stop prod services
+docker compose -f docker-compose.prod.yml --profile api down
+```
+
+### 8) Run database migrations
 
 Create a new migration (after modifying models):
 
@@ -108,7 +133,7 @@ Downgrade one migration:
 alembic downgrade -1
 ```
 
-### 8) Run tests
+### 9) Run tests
 
 ```zsh
 pytest

@@ -1,0 +1,47 @@
+name: ai-newsletter
+services:
+  api:
+    build: .
+    profiles: ["api"]
+    env_file:
+      - .env
+    environment:
+      # In compose, the DB host is the service name `db`, not localhost.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # Ensure Python imports from mounted volume, not installed package
+      PYTHONPATH: /app
+    ports:
+      - "${API_PORT}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Live reload using the volume mount to see code changes
+    volumes:
+      - ./app:/app/app
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
+
+  db:
+    image: pgvector/pgvector:pg16
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  db_data:

@@ -9,6 +9,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from httpx import Request
 from openai import (
     APIConnectionError,
     APITimeoutError,
@@ -62,7 +63,10 @@ async def test_extract_interests_success(
 ) -> None:
     """Test successful interest extraction."""
     # Arrange
-    response_data = {"add_interests": ["Python", "FastAPI"], "remove_interests": ["JavaScript"]}
+    response_data: dict[str, list[str]] = {
+        "add_interests": ["Python", "FastAPI"],
+        "remove_interests": ["JavaScript"],
+    }
     mock_response = _create_chat_completion(json.dumps(response_data))
     mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
@@ -82,7 +86,7 @@ async def test_extract_interests_empty_result(
 ) -> None:
     """Test interest extraction with empty result."""
     # Arrange
-    response_data = {"add_interests": [], "remove_interests": []}
+    response_data: dict[str, list[str]] = {"add_interests": [], "remove_interests": []}
     mock_response = _create_chat_completion(json.dumps(response_data))
     mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
@@ -144,7 +148,7 @@ async def test_extract_interests_api_connection_error(
     """Test handling of API connection error."""
     # Arrange
     mock_openai_client.chat.completions.create = AsyncMock(
-        side_effect=APIConnectionError(request=None)
+        side_effect=APIConnectionError(request=Request("GET", "https://example.com"))
     )
 
     # Act & Assert - client logs error and re-raises
@@ -159,7 +163,7 @@ async def test_extract_interests_api_timeout_error(
     """Test handling of API timeout error."""
     # Arrange
     mock_openai_client.chat.completions.create = AsyncMock(
-        side_effect=APITimeoutError(request=None)
+        side_effect=APITimeoutError(request=Request("GET", "https://example.com"))
     )
 
     # Act & Assert - client logs error and re-raises
