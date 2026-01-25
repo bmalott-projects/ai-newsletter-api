@@ -53,9 +53,8 @@ test_database_url = _get_test_database_url()
 
 _parsed_test = urlparse(test_database_url)
 postgres_url = _parsed_test._replace(path="/postgres").geturl()
-"""
-Async tests fixtures (session-scoped, for async tests that need database access).
-"""
+
+# Async fixtures (session-scoped, for async tests that need database access).
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -165,9 +164,7 @@ async def async_http_client(async_app: FastAPI) -> AsyncIterator[AsyncClient]:
         yield client
 
 
-"""
-Synchronous tests fixtures (function-scoped, for synchronous tests that don't need database access).
-"""
+# Synchronous fixtures (function-scoped, for synchronous tests that don't need database access)
 
 
 @pytest.fixture(scope="function")
