@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib
 import sys
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 import pytest
 from pydantic import Field, PostgresDsn, ValidationError
@@ -22,8 +22,12 @@ class SettingsProtocol(Protocol):
     jwt_algorithm: str
 
 
+class SettingsClass(Protocol):
+    def __call__(self, **kwargs: Any) -> SettingsProtocol: ...
+
+
 @pytest.fixture
-def test_settings_class() -> type[SettingsProtocol]:
+def test_settings_class() -> SettingsClass:
     """Fixture that provides a TestSettings class without .env file loading."""
 
     class TestSettings(BaseSettings):
@@ -40,7 +44,7 @@ def test_settings_class() -> type[SettingsProtocol]:
         log_level: str = "INFO"
         jwt_algorithm: str = "HS256"
 
-    return TestSettings
+    return cast(SettingsClass, TestSettings)
 
 
 @pytest.fixture
