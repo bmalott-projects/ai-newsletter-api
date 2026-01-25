@@ -28,4 +28,4 @@ EXPOSE 8000
 # Run the application as the unprivileged user
 USER appuser
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${API_PORT:-8000}"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

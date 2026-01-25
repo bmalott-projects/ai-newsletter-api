@@ -11,7 +11,7 @@ services:
       # Ensure Python imports from mounted volume, not installed package
       PYTHONPATH: /app
     ports:
-      - "${API_PORT}:${API_PORT}"
+      - "${API_PORT}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -20,9 +20,13 @@ services:
       - ./app:/app/app
     command:
       [
-        "sh",
-        "-c",
-        "uvicorn app.main:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload",
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
       ]
 
   db:
