@@ -1,12 +1,6 @@
-<<<<<<< Updated upstream
-name: Test Suite
-=======
-name: CI Pipeline
->>>>>>> Stashed changes
+name: CI PR Checks
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
@@ -62,13 +56,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install ".[dev]"
 
       - name: Run ruff linting
         run: ruff check .
 
-      - name: Run mypy type checking
-        run: mypy app/
+      - name: Run basedpyright type checking
+        run: basedpyright --project pyproject.toml
 
       - name: Wait for PostgreSQL
         run: |
@@ -76,11 +70,7 @@ jobs:
           import asyncio
           import asyncpg
           import sys
-<<<<<<< Updated upstream
-          
-=======
 
->>>>>>> Stashed changes
           async def check_db():
               for i in range(30):
                   try:
@@ -99,11 +89,7 @@ jobs:
                           print('PostgreSQL failed to start')
                           sys.exit(1)
                       await asyncio.sleep(1)
-<<<<<<< Updated upstream
-          
-=======
 
->>>>>>> Stashed changes
           asyncio.run(check_db())
           "
 

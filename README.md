@@ -1,5 +1,8 @@
 # ai-newsletter-api (backend MVP)
 
+[![CI PR Checks](https://github.com/bmalott-projects/ai-newsletter-api/actions/workflows/ci-pr.yml/badge.svg)](https://github.com/bmalott-projects/ai-newsletter-api/actions/workflows/ci-pr.yml)
+[![CI Main Checks](https://github.com/bmalott-projects/ai-newsletter-api/actions/workflows/ci-main.yml/badge.svg)](https://github.com/bmalott-projects/ai-newsletter-api/actions/workflows/ci-main.yml)
+
 FastAPI backend for an LLM-driven tech newsletter app.
 
 - keep business logic out of routes
