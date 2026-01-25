@@ -50,6 +50,10 @@ def required_env_vars(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "test_key")
     monkeypatch.setenv("JWT_SECRET_KEY", "test_secret")
     monkeypatch.setenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+    monkeypatch.delenv("APP_NAME", raising=False)
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.delenv("LOG_LEVEL", raising=False)
+    monkeypatch.delenv("JWT_ALGORITHM", raising=False)
 
 
 class TestSettingsValidation:
@@ -138,19 +142,18 @@ class TestSettingsValidation:
 
     def test_validate_settings_error_message(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that validate_settings raises MissingRequiredSettingsError with helpful message."""
-        # Arrange: Remove all required env vars
-        monkeypatch.delenv("DATABASE_URL", raising=False)
-        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-        monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
-        monkeypatch.delenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", raising=False)
+        # Arrange: Set required env vars so module import succeeds
+        monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost:5432/db")
+        monkeypatch.setenv("OPENAI_API_KEY", "test_key")
+        monkeypatch.setenv("JWT_SECRET_KEY", "test_secret")
+        monkeypatch.setenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
         # Reload the config module to get a fresh validate_settings function
         if "app.core.config" in sys.modules:
             importlib.reload(sys.modules["app.core.config"])
 
-        # Need to import both of these after the reload (inline, not at the top of the file)
+        # Need to import after the reload (inline, not at the top of the file)
         from app.core import config
-        from app.core.config import MissingRequiredSettingsError
 
         # Prevent Settings from reading .env file by patching model_config
         original_model_config = config.Settings.model_config
@@ -160,15 +163,23 @@ class TestSettingsValidation:
         }
 
         try:
+            # Remove required env vars to trigger the error
+            monkeypatch.delenv("DATABASE_URL", raising=False)
+            monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+            monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+            monkeypatch.delenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", raising=False)
+
             # Act & Assert: Test the real validate_settings function
-            config.validate_settings()
-        except MissingRequiredSettingsError as e:
+            with pytest.raises(config.MissingRequiredSettingsError) as exc_info:
+                config.validate_settings()
+
             # Verify the exception contains missing fields
-            assert len(e.missing_fields) > 0
-            assert "DATABASE_URL" in e.missing_fields or "database_url".upper() in [
-                f.upper() for f in e.missing_fields
+            missing_fields = exc_info.value.missing_fields
+            assert len(missing_fields) > 0
+            assert "DATABASE_URL" in missing_fields or "database_url".upper() in [
+                f.upper() for f in missing_fields
             ]
-            assert "Missing required environment variables" in str(e)
+            assert "Missing required environment variables" in str(exc_info.value)
         finally:
             # Restore original model_config
             config.Settings.model_config = original_model_config
