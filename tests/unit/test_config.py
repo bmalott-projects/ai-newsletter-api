@@ -64,7 +64,7 @@ class TestSettingsValidation:
     """Test settings validation and error handling."""
 
     def test_settings_loads_successfully(
-        self, test_settings_class: type[SettingsProtocol], required_env_vars: None
+        self, test_settings_class: SettingsClass, required_env_vars: None
     ) -> None:
         """Test that valid settings load correctly."""
         # Act
@@ -77,7 +77,7 @@ class TestSettingsValidation:
         assert settings.jwt_access_token_expire_minutes == 60
 
     def test_settings_missing_database_url(
-        self, test_settings_class: type[SettingsProtocol], monkeypatch: pytest.MonkeyPatch
+        self, test_settings_class: SettingsClass, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that missing database_url raises ValidationError."""
         # Arrange: Set other required vars but not DATABASE_URL
@@ -94,7 +94,7 @@ class TestSettingsValidation:
         assert any(error["loc"] == ("database_url",) for error in errors)
 
     def test_settings_missing_jwt_secret_key(
-        self, test_settings_class: type[SettingsProtocol], monkeypatch: pytest.MonkeyPatch
+        self, test_settings_class: SettingsClass, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that missing jwt_secret_key raises ValidationError."""
         # Arrange: Set other required vars but not JWT_SECRET_KEY
@@ -111,7 +111,7 @@ class TestSettingsValidation:
         assert any(error["loc"] == ("jwt_secret_key",) for error in errors)
 
     def test_settings_missing_openai_api_key(
-        self, test_settings_class: type[SettingsProtocol], monkeypatch: pytest.MonkeyPatch
+        self, test_settings_class: SettingsClass, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that missing openai_api_key raises ValidationError."""
         # Arrange: Set other required vars but not OPENAI_API_KEY
@@ -128,7 +128,7 @@ class TestSettingsValidation:
         assert any(error["loc"] == ("openai_api_key",) for error in errors)
 
     def test_settings_missing_jwt_expire_minutes(
-        self, test_settings_class: type[SettingsProtocol], monkeypatch: pytest.MonkeyPatch
+        self, test_settings_class: SettingsClass, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that missing jwt_access_token_expire_minutes raises ValidationError."""
         # Arrange: Set other required vars but not JWT_ACCESS_TOKEN_EXPIRE_MINUTES
@@ -189,7 +189,7 @@ class TestSettingsValidation:
             config.Settings.model_config = original_model_config
 
     def test_settings_optional_fields_have_defaults(
-        self, test_settings_class: type[SettingsProtocol], required_env_vars: None
+        self, test_settings_class: SettingsClass, required_env_vars: None
     ) -> None:
         """Test that optional fields work without env vars."""
         # Act
@@ -202,7 +202,7 @@ class TestSettingsValidation:
         assert settings.jwt_algorithm == "HS256"
 
     def test_settings_invalid_database_url(
-        self, test_settings_class: type[SettingsProtocol], monkeypatch: pytest.MonkeyPatch
+        self, test_settings_class: SettingsClass, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that invalid PostgresDsn format is rejected."""
         # Arrange: Set invalid database URL
@@ -221,7 +221,7 @@ class TestSettingsValidation:
 
     def test_settings_environment_variable_override(
         self,
-        test_settings_class: type[SettingsProtocol],
+        test_settings_class: SettingsClass,
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -242,7 +242,7 @@ class TestSettingsValidation:
         assert settings.jwt_algorithm == "RS256"
 
     def test_settings_jwt_expire_minutes_must_be_integer(
-        self, test_settings_class: type[SettingsProtocol], monkeypatch: pytest.MonkeyPatch
+        self, test_settings_class: SettingsClass, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that jwt_access_token_expire_minutes must be a valid integer."""
         # Arrange: Set invalid integer value
