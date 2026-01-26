@@ -1,10 +1,69 @@
-name: CI Main Checks
+name: CI
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
+      - name: Run ruff linting
+        run: ruff check .
+
+      - name: Run ruff formatting check
+        run: ruff format --check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+          echo "$PWD/.venv/bin" >> $GITHUB_PATH
+
+      - name: Run basedpyright type checking
+        run: basedpyright --project pyproject.toml
+
   test:
     runs-on: ubuntu-latest
 
@@ -44,14 +103,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: "pip"
 
       - name: Install dependencies
         run: |
@@ -60,12 +112,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ".[dev]"
           echo "$PWD/.venv/bin" >> $GITHUB_PATH
-
-      - name: Run ruff linting
-        run: ruff check .
-
-      - name: Run basedpyright type checking
-        run: basedpyright --project pyproject.toml
 
       - name: Wait for PostgreSQL
         run: |
@@ -98,5 +144,3 @@ jobs:
 
       - name: Run full test suite
         run: pytest -v
-
-      # Deployment hook will be added here later.

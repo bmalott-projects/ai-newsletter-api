@@ -243,6 +243,23 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 - **Migrations**: Modify models → `alembic revision --autogenerate -m "msg"` → `alembic upgrade head`
 - **Run tests**: `pytest` (all tests) or `pytest tests/integration/` (integration only)
 
+## CI (GitHub Actions)
+
+**Workflow file**: `.github/workflows/ci.yml`
+
+**Triggers**:
+- `pull_request` to `main`
+- `push` to `main`
+
+**Jobs**:
+- `lint`: runs `ruff check .`
+- `typecheck`: runs `basedpyright --project pyproject.toml`
+- `test`: runs `pytest -v` with a Postgres (pgvector) service
+
+**Notes**:
+- Uses a `.venv` per job and pip caching via `actions/setup-python`.
+- Test job waits for Postgres readiness before running the suite.
+
 ## Code Quality & Standards
 
 ### Type Hints
