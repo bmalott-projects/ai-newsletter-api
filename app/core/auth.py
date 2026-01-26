@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.errors import build_http_error
 from app.db.models.user import User
 from app.db.session import get_db
 
@@ -65,9 +66,10 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ) -> User:
     """FastAPI dependency to get the current authenticated user."""
-    credentials_exception = HTTPException(
+    credentials_exception = build_http_error(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        error="unauthorized",
+        message="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
