@@ -69,8 +69,6 @@ select = [
     "W505",   # Doc line too long (pycodestyle)
 ]
 ignore = [
-    "ANN101",  # Missing type annotation for self
-    "ANN102",  # Missing type annotation for cls
     "ANN201",  # Missing return type annotation for public function (too strict for __init__)
     "ANN401",  # Dynamically typed expressions (Any) are disallowed (too strict)
     "B008",    # Function calls in argument defaults (FastAPI Depends() is intentional)
