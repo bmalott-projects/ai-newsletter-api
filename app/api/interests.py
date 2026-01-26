@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 
 from app.core.auth import get_current_user
+from app.core.errors import build_http_error
 from app.db.models.user import User
-from app.llm.client import LLMClient, OpenAIClient
+from app.llm.client import LLMClient, LLMServiceError, OpenAIClient
 from app.llm.schemas import InterestExtractionResult
 from app.services.interest import extract_interests_from_prompt
 
@@ -35,4 +36,11 @@ async def extract_interests(
     llm_client: LLMClient = Depends(get_llm_client),
 ) -> InterestExtractionResult:
     """Extract interests from a natural language prompt."""
-    return await extract_interests_from_prompt(request.prompt, llm_client)
+    try:
+        return await extract_interests_from_prompt(request.prompt, llm_client)
+    except LLMServiceError as exc:
+        raise build_http_error(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            error=exc.error_code,
+            message=str(exc),
+        ) from exc

@@ -92,10 +92,16 @@ async def test_extract_interests_validation_error(
         "/api/interests/extract", json={"prompt": ""}, headers=headers
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    payload = response.json()
+    assert payload["error"] == "validation_error"
+    assert payload["message"] == "Request validation failed"
 
     # Test missing prompt
     response = await async_http_client.post("/api/interests/extract", json={}, headers=headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    payload = response.json()
+    assert payload["error"] == "validation_error"
+    assert payload["message"] == "Request validation failed"
 
     # Test prompt too long
     long_prompt = "x" * 501
@@ -103,3 +109,6 @@ async def test_extract_interests_validation_error(
         "/api/interests/extract", json={"prompt": long_prompt}, headers=headers
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    payload = response.json()
+    assert payload["error"] == "validation_error"
+    assert payload["message"] == "Request validation failed"

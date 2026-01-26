@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import create_access_token, get_current_user
+from app.core.errors import build_http_error
 from app.db.models.user import User
 from app.db.session import get_db
 from app.services.auth import (
@@ -95,14 +96,16 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)) 
         new_user = await register_user(user_data.email, user_data.password, db)
         return UserResponse.model_validate(new_user)
     except UserAlreadyExistsError as e:
-        raise HTTPException(
+        raise build_http_error(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            error="user_exists",
+            message=str(e),
         ) from e
     except PasswordTooLongError as e:
-        raise HTTPException(
+        raise build_http_error(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=str(e),
+            error="password_too_long",
+            message=str(e),
         ) from e
 
 
@@ -112,15 +115,17 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)) -> T
     try:
         user = await authenticate_user(credentials.email, credentials.password, db)
     except InvalidCredentialsError as e:
-        raise HTTPException(
+        raise build_http_error(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            error="invalid_credentials",
+            message=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
     except PasswordTooLongError as e:
-        raise HTTPException(
+        raise build_http_error(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=str(e),
+            error="password_too_long",
+            message=str(e),
         ) from e
 
     access_token = create_access_token(data={"sub": str(user.id)})
