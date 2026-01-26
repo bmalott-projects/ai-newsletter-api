@@ -20,7 +20,6 @@ ERROR_CODE_BY_STATUS: dict[int, str] = {
     422: "validation_error",
     429: "rate_limited",
     500: "internal_error",
-    503: "service_unavailable",
 }
 
 
@@ -32,6 +31,17 @@ class ErrorResponse(BaseModel):
     details: Any | None = None
 
 
+def error_detail(
+    error: str,
+    message: str,
+    details: Any | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"error": error, "message": message}
+    if details is not None:
+        payload["details"] = details
+    return payload
+
+
 def build_http_error(
     status_code: int,
     error: str,
@@ -41,9 +51,7 @@ def build_http_error(
 ) -> HTTPException:
     return HTTPException(
         status_code=status_code,
-        detail=ErrorResponse(error=error, message=message, details=details).model_dump(
-            exclude_none=True
-        ),
+        detail=error_detail(error=error, message=message, details=details),
         headers=headers,
     )
 
@@ -61,19 +69,19 @@ def _status_phrase(status_code: int) -> str:
 
 def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     if not isinstance(exc, StarletteHTTPException):
-        payload = ErrorResponse(
+        payload = error_detail(
             error=_map_status_to_error(HTTP_500_INTERNAL_SERVER_ERROR),
             message=_status_phrase(HTTP_500_INTERNAL_SERVER_ERROR),
-        ).model_dump(exclude_none=True)
+        )
         return JSONResponse(status_code=HTTP_500_INTERNAL_SERVER_ERROR, content=payload)
     detail = exc.detail
     if isinstance(detail, dict) and "error" in detail and "message" in detail:
-        payload = ErrorResponse.model_validate(detail).model_dump(exclude_none=True)
+        payload = detail
     else:
-        payload = ErrorResponse(
+        payload = error_detail(
             error=_map_status_to_error(exc.status_code),
             message=str(detail) if detail else _status_phrase(exc.status_code),
-        ).model_dump(exclude_none=True)
+        )
     return JSONResponse(
         status_code=exc.status_code,
         content=payload,
@@ -83,24 +91,24 @@ def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
 
 def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logging.exception("Unhandled exception", exc_info=exc)
-    payload = ErrorResponse(
+    payload = error_detail(
         error=_map_status_to_error(HTTP_500_INTERNAL_SERVER_ERROR),
         message=_status_phrase(HTTP_500_INTERNAL_SERVER_ERROR),
-    ).model_dump(exclude_none=True)
+    )
     return JSONResponse(status_code=HTTP_500_INTERNAL_SERVER_ERROR, content=payload)
 
 
 def request_validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     if not isinstance(exc, RequestValidationError):
-        payload = ErrorResponse(
+        payload = error_detail(
             error=_map_status_to_error(HTTP_500_INTERNAL_SERVER_ERROR),
             message=_status_phrase(HTTP_500_INTERNAL_SERVER_ERROR),
-        ).model_dump(exclude_none=True)
+        )
         return JSONResponse(status_code=HTTP_500_INTERNAL_SERVER_ERROR, content=payload)
 
-    payload = ErrorResponse(
+    payload = error_detail(
         error=_map_status_to_error(422),
         message="Request validation failed",
         details=exc.errors(),
-    ).model_dump(exclude_none=True)
+    )
     return JSONResponse(status_code=422, content=payload)
