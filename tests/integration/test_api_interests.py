@@ -9,7 +9,7 @@ import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
 
-from app.api.interests import get_llm_client
+from app.api.interests_api import get_llm_client
 from app.llm.client import (
     LLMAuthenticationError,
     LLMClient,

@@ -14,8 +14,7 @@ from app.core.auth import create_access_token, get_current_user
 from app.core.errors import ErrorResponse, build_http_error
 from app.db.models.user import User
 from app.db.session import get_db
-from app.services.auth import (
-    AuthenticationError,
+from app.services.auth_service import (
     InvalidCredentialsError,
     PasswordTooLongError,
     UserAlreadyExistsError,
