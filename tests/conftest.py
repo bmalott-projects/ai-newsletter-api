@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core import config
 from app.db.base import Base
-from app.db.session import get_db
+from app.db.session import get_db, get_db_transaction
 from app.main import create_app
 
 
@@ -153,6 +153,17 @@ async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> Asy
             yield session
 
     fastapi_app.dependency_overrides[get_db] = override_get_db
+
+    async def override_get_db_transaction() -> AsyncIterator[AsyncSession]:
+        async with test_session_maker() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    fastapi_app.dependency_overrides[get_db_transaction] = override_get_db_transaction
     yield fastapi_app
 
 
@@ -189,6 +200,7 @@ def app() -> FastAPI:
         )
 
     fastapi_app.dependency_overrides[get_db] = mock_get_db
+    fastapi_app.dependency_overrides[get_db_transaction] = mock_get_db
     return fastapi_app
 
 

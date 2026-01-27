@@ -25,3 +25,13 @@ SessionLocal = async_sessionmaker[AsyncSession](
 async def get_db() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:
         yield session
+
+
+async def get_db_transaction() -> AsyncIterator[AsyncSession]:
+    async with SessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
