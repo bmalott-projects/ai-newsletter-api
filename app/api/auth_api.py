@@ -15,6 +15,7 @@ from app.core.errors import ErrorResponse, build_http_error
 from app.db.models.user import User
 from app.db.session import get_db
 from app.services.auth_service import (
+    AuthenticationError,
     InvalidCredentialsError,
     PasswordTooLongError,
     UserAlreadyExistsError,
