@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
-from pydantic import BaseModel
 
 from app.api.auth import router as auth_router
 from app.api.interests import router as interests_router
+from app.api.schemas.meta import HealthResponse
 
 router = APIRouter()
-
-
-class HealthResponse(BaseModel):
-    """Response model for health check."""
-
-    status: str
 
 
 @router.get("/health", tags=["meta"])
