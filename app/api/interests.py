@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.schemas.interests import InterestExtractionRequest
 from app.core.auth import get_current_user
-from app.core.errors import build_http_error
+from app.core.errors import ErrorResponse, build_http_error
 from app.db.models.user import User
 from app.llm.client import LLMClient, LLMServiceError, OpenAIClient
 from app.llm.schemas import InterestExtractionResult
@@ -24,7 +24,6 @@ def get_llm_client() -> LLMClient:
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
-        status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
     },
 )
