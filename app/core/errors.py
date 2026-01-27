@@ -20,6 +20,7 @@ ERROR_CODE_BY_STATUS: dict[int, str] = {
     422: "validation_error",
     429: "rate_limited",
     500: "internal_error",
+    503: "service_unavailable",
 }
 
 
