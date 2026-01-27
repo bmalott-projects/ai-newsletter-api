@@ -15,6 +15,7 @@ from app.core.errors import ErrorResponse, build_http_error
 from app.db.models.user import User
 from app.db.session import get_db
 from app.services.auth import (
+    AuthenticationError,
     InvalidCredentialsError,
     PasswordTooLongError,
     UserAlreadyExistsError,
@@ -40,16 +41,16 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)) 
     try:
         new_user = await register_user(user_data.email, user_data.password, db)
         return UserResponse.model_validate(new_user)
-    except UserAlreadyExistsError as e:
+    except AuthenticationError as e:
+        if isinstance(e, UserAlreadyExistsError):
+            status_code = status.HTTP_400_BAD_REQUEST
+        elif isinstance(e, PasswordTooLongError):
+            status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+        else:
+            status_code = status.HTTP_400_BAD_REQUEST
         raise build_http_error(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            error="user_exists",
-            message=str(e),
-        ) from e
-    except PasswordTooLongError as e:
-        raise build_http_error(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            error="password_too_long",
+            status_code=status_code,
+            error=e.error_code,
             message=str(e),
         ) from e
 
@@ -66,18 +67,21 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)) -> T
     """Authenticate user and return JWT token."""
     try:
         user = await authenticate_user(credentials.email, credentials.password, db)
-    except InvalidCredentialsError as e:
+    except AuthenticationError as e:
+        if isinstance(e, InvalidCredentialsError):
+            status_code = status.HTTP_401_UNAUTHORIZED
+        elif isinstance(e, PasswordTooLongError):
+            status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+        else:
+            status_code = status.HTTP_400_BAD_REQUEST
+        headers = (
+            {"WWW-Authenticate": "Bearer"} if status_code == status.HTTP_401_UNAUTHORIZED else None
+        )
         raise build_http_error(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            error="invalid_credentials",
+            status_code=status_code,
+            error=e.error_code,
             message=str(e),
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from e
-    except PasswordTooLongError as e:
-        raise build_http_error(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            error="password_too_long",
-            message=str(e),
+            headers=headers,
         ) from e
 
     access_token = create_access_token(data={"sub": str(user.id)})

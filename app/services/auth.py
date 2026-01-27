@@ -10,16 +10,35 @@ from app.core.auth import get_password_hash, verify_password
 from app.db.models.user import User
 
 
-class UserAlreadyExistsError(Exception):
+class AuthenticationError(Exception):
+    """Base error for authentication-related failures."""
+
+    def __init__(self, message: str, error_code: str) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
+
+class UserAlreadyExistsError(AuthenticationError):
     """Raised when attempting to register a user that already exists."""
 
+    def __init__(self, message: str = "Email already registered") -> None:
+        super().__init__(message, "user_exists")
 
-class InvalidCredentialsError(Exception):
+
+class InvalidCredentialsError(AuthenticationError):
     """Raised when login credentials are invalid."""
 
+    def __init__(self, message: str = "Incorrect email or password") -> None:
+        super().__init__(message, "invalid_credentials")
 
-class PasswordTooLongError(Exception):
+
+class PasswordTooLongError(AuthenticationError):
     """Raised when password exceeds the maximum allowed length (72 bytes)."""
+
+    def __init__(
+        self, message: str = "Password must not exceed 72 bytes when UTF-8 encoded"
+    ) -> None:
+        super().__init__(message, "password_too_long")
 
 
 async def register_user(email: str, password: str, db: AsyncSession) -> User:
