@@ -60,7 +60,9 @@ class TestUserRegistration:
 
         # Assert: Should return 400 Bad Request
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "already registered" in response.json()["detail"].lower()
+        payload = response.json()
+        assert payload["error"] == "user_exists"
+        assert "already registered" in payload["message"].lower()
 
     @pytest.mark.asyncio
     async def test_register_invalid_email(self, async_http_client: AsyncClient) -> None:
@@ -85,8 +87,10 @@ class TestUserRegistration:
 
         # Assert: Should return 422 Validation Error
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-        error_detail = response.json()["detail"]
-        # Check that the error mentions password length
+        payload = response.json()
+        assert payload["error"] == "validation_error"
+        assert payload["message"] == "Request validation failed"
+        error_detail = payload["details"]
         assert any("password" in str(err).lower() for err in error_detail)
 
 
@@ -124,7 +128,9 @@ class TestUserLogin:
 
         # Assert: Should return 401 Unauthorized
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "incorrect" in response.json()["detail"].lower()
+        payload = response.json()
+        assert payload["error"] == "invalid_credentials"
+        assert "incorrect" in payload["message"].lower()
 
     @pytest.mark.asyncio
     async def test_login_nonexistent_user(self, async_http_client: AsyncClient) -> None:

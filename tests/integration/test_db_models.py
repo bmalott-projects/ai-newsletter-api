@@ -14,7 +14,7 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -215,8 +215,6 @@ class TestCascadeDelete:
 
         # Act: Delete user (CASCADE should delete interests)
         # Use execute with delete statement to let database handle CASCADE
-        from sqlalchemy import delete
-
         await db_session.execute(delete(User).where(User.id == user_id))
         await db_session.commit()
 
@@ -245,8 +243,6 @@ class TestCascadeDelete:
 
         # Act: Delete user (CASCADE should delete newsletters)
         # Use execute with delete statement to let database handle CASCADE
-        from sqlalchemy import delete
-
         await db_session.execute(delete(User).where(User.id == user_id))
         await db_session.commit()
 
@@ -293,8 +289,6 @@ class TestCascadeDelete:
 
         # Act: Delete newsletter (CASCADE should delete content items)
         # Use execute with delete statement to let database handle CASCADE
-        from sqlalchemy import delete
-
         await db_session.execute(delete(Newsletter).where(Newsletter.id == newsletter_id))
         await db_session.commit()
 

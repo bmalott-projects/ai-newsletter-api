@@ -7,9 +7,11 @@ without any external dependencies.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException, status
 from jose import jwt
 
 from app.core.auth import (
@@ -239,13 +241,16 @@ class TestGetCurrentUser:
         mock_db = AsyncMock()
 
         # Act & Assert
-        from fastapi import HTTPException, status
-
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(token=invalid_token, db=mock_db)
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "credentials" in exc_info.value.detail.lower()
+
+        detail = exc_info.value.detail
+        assert isinstance(detail, dict)
+        detail_payload = cast(dict[str, str], detail)
+        assert detail_payload["error"] == "unauthorized"
+        assert "credentials" in detail_payload["message"].lower()
 
     @pytest.mark.asyncio
     async def test_get_current_user_missing_sub(self) -> None:
@@ -257,8 +262,6 @@ class TestGetCurrentUser:
         mock_db = AsyncMock()
 
         # Act & Assert
-        from fastapi import HTTPException, status
-
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(token=token, db=mock_db)
 
@@ -274,8 +277,6 @@ class TestGetCurrentUser:
         mock_db = AsyncMock()
 
         # Act & Assert
-        from fastapi import HTTPException, status
-
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(token=token, db=mock_db)
 
@@ -295,8 +296,6 @@ class TestGetCurrentUser:
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         # Act & Assert
-        from fastapi import HTTPException, status
-
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(token=token, db=mock_db)
 

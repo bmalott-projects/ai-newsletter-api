@@ -3,11 +3,20 @@ from __future__ import annotations
 import logging
 import sys
 from importlib.metadata import PackageNotFoundError, version
+from typing import cast
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.types import ExceptionHandler
 
 from app.api.router import router as api_router
 from app.core.config import MissingRequiredSettingsError
+from app.core.errors import (
+    http_exception_handler,
+    request_validation_exception_handler,
+    unhandled_exception_handler,
+)
 from app.core.lifespan import lifespan
 from app.core.logging import configure_logging
 
@@ -41,6 +50,13 @@ def create_app() -> FastAPI:
         debug=is_debug_mode,
         lifespan=lifespan,
     )
+    app.add_exception_handler(
+        StarletteHTTPException, cast(ExceptionHandler, http_exception_handler)
+    )
+    app.add_exception_handler(
+        RequestValidationError, cast(ExceptionHandler, request_validation_exception_handler)
+    )
+    app.add_exception_handler(Exception, cast(ExceptionHandler, unhandled_exception_handler))
     app.include_router(api_router, prefix="/api")
     return app
 

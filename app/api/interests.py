@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, status
 
+from app.api.schemas.interests import InterestExtractionRequest
 from app.core.auth import get_current_user
+from app.core.errors import ErrorResponse, build_http_error
 from app.db.models.user import User
-from app.llm.client import LLMClient, OpenAIClient
+from app.llm.client import (
+    LLMAuthenticationError,
+    LLMClient,
+    LLMInvalidResponseError,
+    LLMServiceError,
+    LLMUnavailableError,
+    OpenAIClient,
+)
 from app.llm.schemas import InterestExtractionResult
 from app.services.interest import extract_interests_from_prompt
 
@@ -17,22 +25,33 @@ def get_llm_client() -> LLMClient:
     return OpenAIClient()
 
 
-class InterestExtractionRequest(BaseModel):
-    """Request model for interest extraction."""
-
-    prompt: str = Field(
-        ...,
-        min_length=1,
-        max_length=500,
-        description="Natural language prompt to extract interests from",
-    )
-
-
-@router.post("/extract", response_model=InterestExtractionResult)
+@router.post(
+    "/extract",
+    response_model=InterestExtractionResult,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
+        status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
+        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
+    },
+)
 async def extract_interests(
     request: InterestExtractionRequest,
     _current_user: User = Depends(get_current_user),
     llm_client: LLMClient = Depends(get_llm_client),
 ) -> InterestExtractionResult:
     """Extract interests from a natural language prompt."""
-    return await extract_interests_from_prompt(request.prompt, llm_client)
+    try:
+        return await extract_interests_from_prompt(request.prompt, llm_client)
+    except LLMServiceError as exc:
+        if isinstance(exc, (LLMAuthenticationError, LLMInvalidResponseError)):
+            status_code = status.HTTP_502_BAD_GATEWAY
+        elif isinstance(exc, LLMUnavailableError):
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        else:
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        raise build_http_error(
+            status_code=status_code,
+            error=exc.error_code,
+            message=str(exc),
+        ) from exc
