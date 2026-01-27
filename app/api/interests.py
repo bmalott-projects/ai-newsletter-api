@@ -6,7 +6,14 @@ from app.api.schemas.interests import InterestExtractionRequest
 from app.core.auth import get_current_user
 from app.core.errors import ErrorResponse, build_http_error
 from app.db.models.user import User
-from app.llm.client import LLMClient, LLMServiceError, OpenAIClient
+from app.llm.client import (
+    LLMAuthenticationError,
+    LLMClient,
+    LLMInvalidResponseError,
+    LLMServiceError,
+    LLMUnavailableError,
+    OpenAIClient,
+)
 from app.llm.schemas import InterestExtractionResult
 from app.services.interest import extract_interests_from_prompt
 
@@ -24,6 +31,7 @@ def get_llm_client() -> LLMClient:
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
+        status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
     },
 )
@@ -36,8 +44,14 @@ async def extract_interests(
     try:
         return await extract_interests_from_prompt(request.prompt, llm_client)
     except LLMServiceError as exc:
+        if isinstance(exc, (LLMAuthenticationError, LLMInvalidResponseError)):
+            status_code = status.HTTP_502_BAD_GATEWAY
+        elif isinstance(exc, LLMUnavailableError):
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        else:
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         raise build_http_error(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=status_code,
             error=exc.error_code,
             message=str(exc),
         ) from exc
