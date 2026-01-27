@@ -15,7 +15,7 @@ from app.llm.client import (
     OpenAIClient,
 )
 from app.llm.schemas import InterestExtractionResult
-from app.services.interest import extract_interests_from_prompt
+from app.services.interest_service import extract_interests_from_prompt
 
 router = APIRouter()
 

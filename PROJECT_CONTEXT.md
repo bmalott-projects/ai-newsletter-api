@@ -286,6 +286,11 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 - For routes that accept Pydantic request bodies, include `responses={422: {"model": ErrorResponse}}`
   (and any other relevant status codes) to keep OpenAPI docs consistent.
 
+### Naming Conventions
+
+- Excluding files in the core package, when a filename does not clearly indicate its layer, append the layer name in singular form.
+  Example: `auth_service.py`, `interests_api.py`.
+
 ### SQLAlchemy Async Patterns
 
 - **Use Core-style statements** for async operations: `select()`, `delete()`, `insert()`, `update()`
