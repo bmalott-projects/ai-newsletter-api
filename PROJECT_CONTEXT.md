@@ -31,18 +31,18 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 
 ### Tech Stack Choices & Rationale
 
-| Technology                          | Why                                                                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| **FastAPI**                         | Fast iteration, excellent Pydantic integration, async-first, auto-generated OpenAPI docs   |
-| **Pydantic v2 + pydantic-settings** | Strict schema validation (reused for LLM output guardrails), structured config from `.env` |
-| **JWT authentication**              | python-jose for JWT tokens, passlib for password hashing (stateless, scalable auth)        |
-| **OpenAI SDK**                      | LLM client for interest extraction and newsletter generation                               |
-| **SQLAlchemy 2 (async) + asyncpg**  | Production-grade Postgres with modern typed ORM, async support                             |
-| **Alembic**                         | Migration-first approach (required for pgvector columns/indexes), schema as code           |
-| **pgvector (extension + library)**  | Embedding similarity for deduplication without separate vector DB in MVP                   |
-| **PostgreSQL**                      | Relational DB + vector capabilities via pgvector extension (single database)               |
-| **pytest + httpx**                  | Fast API tests, async test support                                                         |
-| **ruff (lint+format) + basedpyright** | Fast linting, consistent formatting, **strict type checking** (type hints required)      |
+| Technology                            | Why                                                                                        |
+| ------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **FastAPI**                           | Fast iteration, excellent Pydantic integration, async-first, auto-generated OpenAPI docs   |
+| **Pydantic v2 + pydantic-settings**   | Strict schema validation (reused for LLM output guardrails), structured config from `.env` |
+| **JWT authentication**                | python-jose for JWT tokens, passlib for password hashing (stateless, scalable auth)        |
+| **OpenAI SDK**                        | LLM client for interest extraction and newsletter generation                               |
+| **SQLAlchemy 2 (async) + asyncpg**    | Production-grade Postgres with modern typed ORM, async support                             |
+| **Alembic**                           | Migration-first approach (required for pgvector columns/indexes), schema as code           |
+| **pgvector (extension + library)**    | Embedding similarity for deduplication without separate vector DB in MVP                   |
+| **PostgreSQL**                        | Relational DB + vector capabilities via pgvector extension (single database)               |
+| **pytest + httpx**                    | Fast API tests, async test support                                                         |
+| **ruff (lint+format) + basedpyright** | Fast linting, consistent formatting, **strict type checking** (type hints required)        |
 
 ### Design Principles
 
@@ -57,12 +57,14 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 ### Core vs Services Layer
 
 **Core Layer (`app/core/`)** - Infrastructure & Cross-Cutting Utilities:
+
 - **Purpose**: Low-level utilities used across the entire application
 - **Characteristics**: No business rules, domain-agnostic, infrastructure concerns
 - **Examples**: Password hashing (`get_password_hash()`), JWT token creation (`create_access_token()`), configuration, logging
 - **Think of it as**: Tools in a toolbox - reusable utilities
 
 **Services Layer (`app/services/`)** - Domain Business Logic:
+
 - **Purpose**: Domain-specific business logic that orchestrates multiple components
 - **Characteristics**: Contains business rules, domain-specific, coordinates core utilities + DB + LLM
 - **Examples**: User registration (`register_user()`), authentication (`authenticate_user()`), interest extraction
@@ -94,14 +96,12 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 ### Core User Flows
 
 1. **Interest Management**
-
    - User provides natural language prompt (e.g., "I'm interested in Python async patterns and React hooks")
    - LLM extracts structured interests: `{add_interests: [...], remove_interests: [...]}`
    - System upserts interests, marks removed ones inactive (soft delete)
    - User can also view/delete interests explicitly via API
 
 2. **Newsletter Generation**
-
    - Expand interests into subtopics (LLM, cheap call)
    - Research via search APIs (Tavily/SerpAPI - non-LLM)
    - Deduplicate: no repeated URLs, embedding similarity vs past content
@@ -160,13 +160,13 @@ class Settings(BaseSettings):
 
 The project follows a layered testing approach, testing each layer appropriately:
 
-| Layer | Test Type | Rationale |
-|-------|-----------|-----------|
-| **API Routes** (`app/api/`) | Integration tests (httpx) | Test full HTTP flow, validation, authentication, and integration with services |
-| **Services** (`app/services/`) | Unit tests (mocked dependencies) | Test business logic in isolation without external dependencies |
-| **LLM Client** (`app/llm/`) | Unit tests (mocked OpenAI) | Test LLM integration and error handling without real API calls |
-| **Core Utils** (`app/core/`) | Unit tests | Test pure functions (password hashing, JWT operations) |
-| **Database Models** | Integration tests | Test relationships, constraints, and database operations |
+| Layer                          | Test Type                        | Rationale                                                                      |
+| ------------------------------ | -------------------------------- | ------------------------------------------------------------------------------ |
+| **API Routes** (`app/api/`)    | Integration tests (httpx)        | Test full HTTP flow, validation, authentication, and integration with services |
+| **Services** (`app/services/`) | Unit tests (mocked dependencies) | Test business logic in isolation without external dependencies                 |
+| **LLM Client** (`app/llm/`)    | Unit tests (mocked OpenAI)       | Test LLM integration and error handling without real API calls                 |
+| **Core Utils** (`app/core/`)   | Unit tests                       | Test pure functions (password hashing, JWT operations)                         |
+| **Database Models**            | Integration tests                | Test relationships, constraints, and database operations                       |
 
 ### Testing Patterns
 
@@ -180,17 +180,20 @@ The project follows a layered testing approach, testing each layer appropriately
 ### What to Test
 
 **✅ Test (Integration Tests):**
+
 - API endpoints - Full HTTP request/response cycle, validation, authentication
 - Database operations - Model relationships, constraints, queries
 - End-to-end flows - Complete user workflows through the API
 
 **✅ Test (Unit Tests):**
+
 - Service layer business logic - With mocked dependencies (LLM, DB)
 - LLM client - Mock OpenAI responses, test error handling
 - Core utilities - Password hashing, JWT operations, pure functions
 - Input validation - Pydantic model validation
 
 **❌ Don't Test:**
+
 - Framework internals (FastAPI, SQLAlchemy core functionality)
 - Third-party library code
 - Simple pass-through functions without logic
@@ -248,15 +251,18 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 **Workflow file**: `.github/workflows/ci.yml`
 
 **Triggers**:
+
 - `pull_request` to `main`
 - `push` to `main`
 
 **Jobs**:
+
 - `lint`: runs `ruff check .`
 - `typecheck`: runs `basedpyright --project pyproject.toml`
 - `test`: runs `pytest -v` with a Postgres (pgvector) service
 
 **Notes**:
+
 - Uses a `.venv` per job and pip caching via `actions/setup-python`.
 - Test job waits for Postgres readiness before running the suite.
 
@@ -273,6 +279,12 @@ See **`README.md`** for detailed setup instructions. Quick reference:
 - **Ruff**: Linting and formatting (enforces PEP 8, type hints (ANN rules), code quality (B, PIE, SIM rules))
 - **BasedPyright**: Strict type checking (Pyright config in `pyproject.toml`)
 - **Ignored rules**: `B008` (FastAPI `Depends()` in argument defaults is intentional)
+
+### API Error Responses
+
+- All routes should return standardized error shapes using build_http_error (which uses the ErrorResponse class): `{error, message, details?}`.
+- For routes that accept Pydantic request bodies, include `responses={422: {"model": ErrorResponse}}`
+  (and any other relevant status codes) to keep OpenAPI docs consistent.
 
 ### SQLAlchemy Async Patterns
 
