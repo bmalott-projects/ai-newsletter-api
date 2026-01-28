@@ -11,24 +11,47 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.config import settings
 
+_engine: AsyncEngine | None = None
+_session_maker: async_sessionmaker[AsyncSession] | None = None
+_database_url: str | None = None
 
-def create_engine() -> AsyncEngine:
-    return create_async_engine(str(settings.database_url), pool_pre_ping=True)
+
+def _build_session_maker(
+    database_url: str,
+) -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
+    engine = create_async_engine(database_url, pool_pre_ping=True)
+    session_maker = async_sessionmaker[AsyncSession](
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
+    return engine, session_maker
 
 
-engine = create_engine()
-SessionLocal = async_sessionmaker[AsyncSession](
-    bind=engine, class_=AsyncSession, expire_on_commit=False
-)
+def get_engine() -> AsyncEngine:
+    global _engine, _session_maker, _database_url
+    database_url = str(settings.database_url)
+    if _engine is None or _database_url != database_url:
+        if _engine is not None:
+            _engine.sync_engine.dispose()
+        _engine, _session_maker = _build_session_maker(database_url)
+        _database_url = database_url
+    return _engine
+
+
+def get_session_maker() -> async_sessionmaker[AsyncSession]:
+    get_engine()
+    assert _session_maker is not None
+    return _session_maker
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
-    async with SessionLocal() as session:
+    session_maker = get_session_maker()
+    async with session_maker() as session:
         yield session
 
 
 async def get_db_transaction() -> AsyncIterator[AsyncSession]:
-    async with SessionLocal() as session:
+    session_maker = get_session_maker()
+    async with session_maker() as session:
         try:
             yield session
             await session.commit()
