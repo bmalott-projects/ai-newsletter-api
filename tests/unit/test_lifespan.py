@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -10,13 +10,15 @@ from app.core.lifespan import lifespan, verify_database_connection
 @pytest.mark.asyncio
 async def test_verify_database_connection_success() -> None:
     """Test that database connection verification succeeds when DB is available."""
-    with patch("app.core.lifespan.engine") as mock_engine:
+    with patch("app.core.lifespan.get_engine") as mock_get_engine:
+        mock_engine = MagicMock()
         mock_conn = AsyncMock()
         mock_execute = AsyncMock()
         mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
         mock_conn.__aexit__ = AsyncMock(return_value=None)
         mock_conn.execute = mock_execute
-        mock_engine.connect.return_value = mock_conn
+        mock_engine.connect = MagicMock(return_value=mock_conn)
+        mock_get_engine.return_value = mock_engine
 
         await verify_database_connection()
 
@@ -27,8 +29,10 @@ async def test_verify_database_connection_success() -> None:
 @pytest.mark.asyncio
 async def test_verify_database_connection_failure() -> None:
     """Test that database connection verification raises on failure."""
-    with patch("app.core.lifespan.engine") as mock_engine:
-        mock_engine.connect.side_effect = Exception("Connection failed")
+    with patch("app.core.lifespan.get_engine") as mock_get_engine:
+        mock_engine = MagicMock()
+        mock_engine.connect = MagicMock(side_effect=Exception("Connection failed"))
+        mock_get_engine.return_value = mock_engine
         with pytest.raises(RuntimeError, match="Failed to connect to database"):
             await verify_database_connection()
 
@@ -66,8 +70,10 @@ async def test_lifespan_verifies_db_in_non_test_environment(
 async def test_lifespan_disposes_engine_on_shutdown(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that lifespan disposes engine on shutdown."""
     monkeypatch.setattr(lifespan_module.settings, "environment", "test")
-    with patch("app.core.lifespan.engine") as mock_engine:
+    with patch("app.core.lifespan.get_engine") as mock_get_engine:
+        mock_engine = AsyncMock()
         mock_engine.dispose = AsyncMock()
+        mock_get_engine.return_value = mock_engine
         app = FastAPI()
 
         async with lifespan(app):
@@ -82,8 +88,10 @@ async def test_lifespan_disposes_engine_even_if_startup_fails(
 ) -> None:
     """Test that engine is disposed even if startup verification fails."""
     monkeypatch.setattr(lifespan_module.settings, "environment", "local")
-    with patch("app.core.lifespan.engine") as mock_engine:
+    with patch("app.core.lifespan.get_engine") as mock_get_engine:
+        mock_engine = AsyncMock()
         mock_engine.dispose = AsyncMock()
+        mock_get_engine.return_value = mock_engine
         with patch(
             "app.core.lifespan.verify_database_connection",
             side_effect=RuntimeError("DB failed"),

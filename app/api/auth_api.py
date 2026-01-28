@@ -13,7 +13,7 @@ from app.api.schemas.auth import (
 from app.core.auth import create_access_token, get_current_user
 from app.core.errors import ErrorResponse, build_http_error
 from app.db.models.user import User
-from app.db.session import get_db
+from app.db.session import get_db, get_db_transaction
 from app.services.auth_service import (
     AuthenticationError,
     InvalidCredentialsError,
@@ -36,7 +36,9 @@ router = APIRouter()
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
     },
 )
-async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)) -> UserResponse:
+async def register(
+    user_data: UserRegister, db: AsyncSession = Depends(get_db_transaction)
+) -> UserResponse:
     """Register a new user."""
     try:
         new_user = await register_user(user_data.email, user_data.password, db)
@@ -105,7 +107,8 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
     responses={status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse}},
 )
 async def delete_me(
-    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_transaction),
 ) -> DeleteUserResponse:
     """Delete the current authenticated user and all associated data."""
     deleted_id = await delete_user(current_user.id, db)

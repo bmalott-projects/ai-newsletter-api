@@ -74,9 +74,7 @@ async def register_user(email: str, password: str, db: AsyncSession) -> User:
             insert(User).values(email=email, hashed_password=hashed_password).returning(User)
         )
         new_user = result.scalar_one()
-        await db.commit()
     except IntegrityError as e:
-        await db.rollback()
         # Check if it's a unique constraint violation on email
         # asyncpg raises UniqueViolationError (error code 23505) for unique constraint violations
         error_str = str(e.orig).lower()
@@ -139,5 +137,4 @@ async def delete_user(user_id: int, db: AsyncSession) -> int:
         This performs a hard delete. Associated data is removed via CASCADE.
     """
     await db.execute(delete(User).where(User.id == user_id))
-    await db.commit()
     return user_id

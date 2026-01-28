@@ -23,7 +23,6 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core import config
 from app.db.base import Base
-from app.db.session import get_db
 from app.main import create_app
 
 
@@ -134,7 +133,7 @@ async def db_session(
 
 @pytest_asyncio.fixture(scope="session")
 async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> AsyncIterator[FastAPI]:
-    """Creates FastAPI app for async tests with test database override.
+    """Creates FastAPI app for async tests with test database settings.
     It is reused across all tests that include it (session-scoped).
 
     Uses session-scoped engine and session maker to avoid event loop conflicts
@@ -146,13 +145,6 @@ async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> Asy
 
     fastapi_app = create_app()
 
-    # Override the database dependency to use test database
-    # Reuse session-scoped session maker to avoid event loop conflicts with AsyncClient
-    async def override_get_db() -> AsyncIterator[AsyncSession]:
-        async with test_session_maker() as session:
-            yield session
-
-    fastapi_app.dependency_overrides[get_db] = override_get_db
     yield fastapi_app
 
 
@@ -169,7 +161,7 @@ async def async_http_client(async_app: FastAPI) -> AsyncIterator[AsyncClient]:
 
 @pytest.fixture(scope="function")
 def app() -> FastAPI:
-    """Creates a FastAPI app for synchronous tests (function-scoped, no database dependency).
+    """Creates a FastAPI app for synchronous tests (function-scoped).
 
     Use this for sync tests that don't need database access. Tests using this
     can run in parallel since they don't share an event loop.
@@ -180,15 +172,6 @@ def app() -> FastAPI:
 
     fastapi_app = create_app()
 
-    # Mock the database dependency to prevent actual DB calls
-    # This allows sync tests to run without needing async fixtures
-    async def mock_get_db() -> AsyncIterator[AsyncSession]:
-        raise RuntimeError(
-            "Database dependency not available in sync tests. "
-            "Use async test with 'async_app' fixture for database access."
-        )
-
-    fastapi_app.dependency_overrides[get_db] = mock_get_db
     return fastapi_app
 
 

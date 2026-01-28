@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.core.config import settings
-from app.db.session import engine
+from app.db.session import get_engine
 
 
 @asynccontextmanager
@@ -21,13 +21,13 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
         # Shutdown
     finally:
-        await engine.dispose()
+        await get_engine().dispose()
 
 
 async def verify_database_connection() -> None:
     """Verify database connectivity at startup. Raises if connection fails."""
     try:
-        async with engine.connect() as conn:
+        async with get_engine().connect() as conn:
             await conn.execute(text("SELECT 1"))
     except Exception as e:
         raise RuntimeError(f"Failed to connect to database: {e}") from e
