@@ -53,7 +53,6 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 5. **Multiple narrow prompts** - Not one giant prompt (testable, debuggable)
 6. **Content history is persistent** - Enables deduplication across newsletter issues
 7. **Migration-first schema** - Alembic migrations are source of truth
-8. **Idempotent deletes** - Delete endpoints succeed even if the record is already missing
 
 ### Core vs Services Layer
 
