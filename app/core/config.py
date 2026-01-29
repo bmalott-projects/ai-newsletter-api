@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import Field, PostgresDsn, ValidationError
+from pydantic import Field, PostgresDsn, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,23 +20,43 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Fallback values if there is no .env file
-    app_name: str = "ai-newsletter-api"
-    environment: str = "local"
-    log_level: str = "INFO"
-
-    # Database configuration (required to prevent accidental connection to wrong database)
-    database_url: PostgresDsn = Field(..., description="Database connection URL (required)")
-
-    # OpenAI configuration
+    # Required environment variables
+    api_port: int = Field(..., description="API port (required)")
+    postgres_user: str = Field(..., description="Postgres user (required)")
+    postgres_password: str = Field(..., description="Postgres password (required)")
+    postgres_host: str = Field(..., description="Postgres host (required)")
+    postgres_db: str = Field(..., description="Postgres database name (required)")
     openai_api_key: str = Field(..., description="OpenAI API key (required)")
-
-    # JWT configuration
     jwt_secret_key: str = Field(..., description="JWT secret key for token signing (required)")
-    jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = Field(
         ..., description="JWT token expiration in minutes (required)"
     )
+
+    # Database url built from components
+    database_url: PostgresDsn | None = Field(
+        default=None,
+        description="Database connection URL",
+    )
+
+    @model_validator(mode="after")
+    def build_database_url(self) -> Settings:
+        """Build database_url from Postgres components when missing."""
+        if self.database_url is None:
+            self.database_url = PostgresDsn.build(
+                scheme="postgresql+asyncpg",
+                username=self.postgres_user,
+                password=self.postgres_password,
+                host=self.postgres_host,
+                path=f"/{self.postgres_db}",
+            )
+        return self
+
+    # Optional environment variables (defaults provided)
+    app_name: str = "ai-newsletter-api"
+    environment: str = "local"
+    log_level: str = "INFO"
+    jwt_algorithm: str = "HS256"
+    rate_limit_storage_url: str = "redis://localhost:6379/0"
 
 
 def validate_settings() -> Settings:

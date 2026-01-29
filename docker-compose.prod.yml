@@ -8,7 +8,7 @@ services:
       - .env
     environment:
       # In compose, the DB host is the service name `db`, not localhost.
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      POSTGRES_HOST: db
     ports:
       - "${API_PORT}:8000"
     depends_on:

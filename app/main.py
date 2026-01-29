@@ -7,6 +7,8 @@ from typing import cast
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ExceptionHandler
 
@@ -14,11 +16,13 @@ from app.api.router import router as api_router
 from app.core.config import MissingRequiredSettingsError
 from app.core.errors import (
     http_exception_handler,
+    rate_limit_exception_handler,
     request_validation_exception_handler,
     unhandled_exception_handler,
 )
 from app.core.lifespan import lifespan
 from app.core.logging import configure_logging
+from app.core.rate_limit import limiter
 
 # Import settings - this may raise MissingRequiredSettingsError
 try:
@@ -56,7 +60,12 @@ def create_app() -> FastAPI:
     app.add_exception_handler(
         RequestValidationError, cast(ExceptionHandler, request_validation_exception_handler)
     )
+    app.add_exception_handler(
+        RateLimitExceeded, cast(ExceptionHandler, rate_limit_exception_handler)
+    )
     app.add_exception_handler(Exception, cast(ExceptionHandler, unhandled_exception_handler))
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)
     app.include_router(api_router, prefix="/api")
     return app
 

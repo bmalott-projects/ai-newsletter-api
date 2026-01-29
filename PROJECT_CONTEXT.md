@@ -143,14 +143,7 @@ class Settings(BaseSettings):
 - **Required fields validated on startup**, raising `MissingRequiredSettingsError` and exiting in the app entrypoint
 - In tests, use `monkeypatch.setattr(config.settings, "environment", "test")` (not `setenv()`)
 
-**Environment variables** (see `env.example`):
-
-- `APP_NAME`, `ENVIRONMENT`, `LOG_LEVEL`
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_DB`
-- `DATABASE_URL` (for local runs)
-- `API_PORT` (for Docker Compose)
-- `OPENAI_API_KEY` (OpenAI API key for LLM operations)
-- `JWT_SECRET_KEY` (Secret key for signing JWT tokens)
+**Environment variables** (see `env.example`)
 
 ## Test Suite
 
