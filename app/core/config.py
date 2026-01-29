@@ -26,21 +26,27 @@ class Settings(BaseSettings):
     postgres_password: str = Field(..., description="Postgres password (required)")
     postgres_host: str = Field(..., description="Postgres host (required)")
     postgres_db: str = Field(..., description="Postgres database name (required)")
+    redis_host: str = Field(..., description="Redis host (required)")
+    redis_db: int = Field(..., description="Redis database number (required)")
     openai_api_key: str = Field(..., description="OpenAI API key (required)")
     jwt_secret_key: str = Field(..., description="JWT secret key for token signing (required)")
     jwt_access_token_expire_minutes: int = Field(
         ..., description="JWT token expiration in minutes (required)"
     )
 
-    # Database url built from components
+    # Database/Redis urls built from components
     database_url: PostgresDsn | None = Field(
         default=None,
         description="Database connection URL",
     )
+    rate_limit_storage_url: str | None = Field(
+        default=None,
+        description="Rate limit storage URL",
+    )
 
     @model_validator(mode="after")
-    def build_database_url(self) -> Settings:
-        """Build database_url from Postgres components when missing."""
+    def build_derived_urls(self) -> Settings:
+        """Build URLs from components when missing."""
         if self.database_url is None:
             self.database_url = PostgresDsn.build(
                 scheme="postgresql+asyncpg",
@@ -49,6 +55,8 @@ class Settings(BaseSettings):
                 host=self.postgres_host,
                 path=self.postgres_db,
             )
+        if self.rate_limit_storage_url is None:
+            self.rate_limit_storage_url = f"redis://{self.redis_host}:6379/{self.redis_db}"
         return self
 
     # Optional environment variables (defaults provided)
@@ -56,7 +64,6 @@ class Settings(BaseSettings):
     environment: str = "local"
     log_level: str = "INFO"
     jwt_algorithm: str = "HS256"
-    rate_limit_storage_url: str = "redis://localhost:6379/0"
 
 
 def validate_settings() -> Settings:

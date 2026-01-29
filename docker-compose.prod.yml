@@ -7,12 +7,15 @@ services:
     env_file:
       - .env
     environment:
-      # In compose, the DB host is the service name `db`, not localhost.
+      # In compose, the DB/Redis host is the service name, not localhost.
       POSTGRES_HOST: db
+      REDIS_HOST: redis
     ports:
       - "${API_PORT}:8000"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   db:
@@ -25,6 +28,16 @@ services:
       - db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
