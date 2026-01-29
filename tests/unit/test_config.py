@@ -61,7 +61,7 @@ def test_settings_class() -> SettingsClass:
                     username=self.postgres_user,
                     password=self.postgres_password,
                     host=self.postgres_host,
-                    path=f"/{self.postgres_db}",
+                    path=self.postgres_db,
                 )
             return self
 

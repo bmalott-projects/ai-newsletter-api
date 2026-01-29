@@ -47,7 +47,7 @@ class Settings(BaseSettings):
                 username=self.postgres_user,
                 password=self.postgres_password,
                 host=self.postgres_host,
-                path=f"/{self.postgres_db}",
+                path=self.postgres_db,
             )
         return self
 
