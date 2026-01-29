@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 
 from app.api.schemas.interests import InterestExtractionRequest
 from app.core.auth import get_current_user
 from app.core.errors import ErrorResponse, build_http_error
+from app.core.prompt_sanitizer import PromptValidationError, sanitize_prompt
+from app.core.rate_limit import (
+    INTEREST_EXTRACT_RATE_LIMIT,
+    limit,
+    rate_limit_user_or_ip_key,
+)
 from app.db.models.user import User
 from app.llm.client import (
     LLMAuthenticationError,
@@ -29,20 +35,31 @@ def get_llm_client() -> LLMClient:
     "/extract",
     response_model=InterestExtractionResult,
     responses={
+        status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
         status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
     },
 )
+@limit(INTEREST_EXTRACT_RATE_LIMIT, key_func=rate_limit_user_or_ip_key)
 async def extract_interests(
-    request: InterestExtractionRequest,
+    request: Request,
+    request_data: InterestExtractionRequest,
     _current_user: User = Depends(get_current_user),
     llm_client: LLMClient = Depends(get_llm_client),
 ) -> InterestExtractionResult:
     """Extract interests from a natural language prompt."""
     try:
-        return await extract_interests_from_prompt(request.prompt, llm_client)
+        sanitized_prompt = sanitize_prompt(request_data.prompt)
+        return await extract_interests_from_prompt(sanitized_prompt, llm_client)
+    except PromptValidationError as exc:
+        raise build_http_error(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error=exc.error_code,
+            message=str(exc),
+        ) from exc
     except LLMServiceError as exc:
         if isinstance(exc, (LLMAuthenticationError, LLMInvalidResponseError)):
             status_code = status.HTTP_502_BAD_GATEWAY

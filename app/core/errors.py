@@ -104,3 +104,11 @@ def request_validation_exception_handler(request: Request, exc: Exception) -> JS
         details=exc.errors(),
     ).model_dump(exclude_none=True)
     return JSONResponse(status_code=422, content=payload)
+
+
+def rate_limit_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    payload = ErrorResponse(
+        error=_map_status_to_error(429),
+        message="Too many requests",
+    ).model_dump(exclude_none=True)
+    return JSONResponse(status_code=429, content=payload, headers=getattr(exc, "headers", None))
