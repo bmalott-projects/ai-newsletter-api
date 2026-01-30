@@ -41,8 +41,8 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     responses={
         status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
     },
 )
 @limit(AUTH_REGISTER_RATE_LIMIT, key_func=rate_limit_ip_key)
@@ -74,8 +74,8 @@ async def register(
     response_model=Token,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
     },
 )
 @limit(AUTH_LOGIN_RATE_LIMIT, key_func=rate_limit_ip_key)

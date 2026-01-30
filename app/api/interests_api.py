@@ -37,8 +37,8 @@ def get_llm_client() -> LLMClient:
     responses={
         status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
         status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
     },
