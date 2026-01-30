@@ -29,16 +29,16 @@ def sanitize_prompt(prompt: str) -> str:
         raise PromptValidationError("Prompt contains unsupported control characters.")
     if _URL_PATTERN.search(prompt):
         raise PromptValidationError("Prompt must not include URLs.")
-    for pattern in _INJECTION_PATTERNS:
-        if pattern.search(prompt):
-            raise PromptValidationError("Prompt contains disallowed instruction patterns.")
-
     sanitized = _CODE_BLOCK_PATTERN.sub(" ", prompt)
     sanitized = _INLINE_CODE_PATTERN.sub(" ", sanitized)
     sanitized = " ".join(sanitized.split())
 
     if not sanitized:
         raise PromptValidationError("Prompt must include valid text after sanitization.")
+
+    for pattern in _INJECTION_PATTERNS:
+        if pattern.search(sanitized):
+            raise PromptValidationError("Prompt contains disallowed instruction patterns.")
 
     if sanitized != prompt:
         logger.info(
