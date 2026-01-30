@@ -15,8 +15,10 @@ class SettingsProtocol(Protocol):
     postgres_user: str
     postgres_password: str
     postgres_host: str
+    postgres_port: int
     postgres_db: str
     redis_host: str
+    redis_port: int
     redis_db: int
     database_url: PostgresDsn
     rate_limit_storage_url: str
@@ -43,8 +45,10 @@ def test_settings_class() -> SettingsClass:
         postgres_user: str = Field(..., description="Postgres user (required)")
         postgres_password: str = Field(..., description="Postgres password (required)")
         postgres_host: str = Field(..., description="Postgres host (required)")
+        postgres_port: int = Field(..., description="Postgres port (required)")
         postgres_db: str = Field(..., description="Postgres database name (required)")
         redis_host: str = Field(..., description="Redis host (required)")
+        redis_port: int = Field(..., description="Redis port (required)")
         redis_db: int = Field(..., description="Redis database number (required)")
         openai_api_key: str = Field(..., description="OpenAI API key (required)")
         jwt_secret_key: str = Field(..., description="JWT secret key for token signing (required)")
@@ -70,10 +74,13 @@ def test_settings_class() -> SettingsClass:
                     username=self.postgres_user,
                     password=self.postgres_password,
                     host=self.postgres_host,
+                    port=self.postgres_port,
                     path=self.postgres_db,
                 )
             if self.rate_limit_storage_url is None:
-                self.rate_limit_storage_url = f"redis://{self.redis_host}:6379/{self.redis_db}"
+                self.rate_limit_storage_url = (
+                    f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+                )
             return self
 
         # Optional fields with defaults
@@ -92,8 +99,10 @@ def required_env_vars(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("POSTGRES_USER", "user")
     monkeypatch.setenv("POSTGRES_PASSWORD", "pass")
     monkeypatch.setenv("POSTGRES_HOST", "localhost")
+    monkeypatch.setenv("POSTGRES_PORT", "5432")
     monkeypatch.setenv("POSTGRES_DB", "db")
     monkeypatch.setenv("REDIS_HOST", "localhost")
+    monkeypatch.setenv("REDIS_PORT", "6379")
     monkeypatch.setenv("REDIS_DB", "0")
     monkeypatch.setenv("OPENAI_API_KEY", "test_key")
     monkeypatch.setenv("JWT_SECRET_KEY", "test_secret")
@@ -171,6 +180,23 @@ class TestSettingsValidation:
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("postgres_host",) for error in errors)
 
+    def test_settings_missing_postgres_port(
+        self,
+        test_settings_class: SettingsClass,
+        required_env_vars: None,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test that missing postgres_port raises ValidationError."""
+        # Arrange: Set other required vars but not POSTGRES_PORT
+        monkeypatch.delenv("POSTGRES_PORT", raising=False)
+
+        # Act & Assert
+        with pytest.raises(ValidationError) as exc_info:
+            test_settings_class()
+
+        errors = exc_info.value.errors()
+        assert any(error["loc"] == ("postgres_port",) for error in errors)
+
     def test_settings_missing_postgres_db(
         self,
         test_settings_class: SettingsClass,
@@ -204,6 +230,23 @@ class TestSettingsValidation:
 
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("redis_host",) for error in errors)
+
+    def test_settings_missing_redis_port(
+        self,
+        test_settings_class: SettingsClass,
+        required_env_vars: None,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test that missing redis_port raises ValidationError."""
+        # Arrange: Set other required vars but not REDIS_PORT
+        monkeypatch.delenv("REDIS_PORT", raising=False)
+
+        # Act & Assert
+        with pytest.raises(ValidationError) as exc_info:
+            test_settings_class()
+
+        errors = exc_info.value.errors()
+        assert any(error["loc"] == ("redis_port",) for error in errors)
 
     def test_settings_missing_redis_db(
         self,
@@ -299,8 +342,10 @@ class TestSettingsValidation:
             monkeypatch.delenv("POSTGRES_USER", raising=False)
             monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
             monkeypatch.delenv("POSTGRES_HOST", raising=False)
+            monkeypatch.delenv("POSTGRES_PORT", raising=False)
             monkeypatch.delenv("POSTGRES_DB", raising=False)
             monkeypatch.delenv("REDIS_HOST", raising=False)
+            monkeypatch.delenv("REDIS_PORT", raising=False)
             monkeypatch.delenv("REDIS_DB", raising=False)
             monkeypatch.delenv("OPENAI_API_KEY", raising=False)
             monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
@@ -318,8 +363,10 @@ class TestSettingsValidation:
             assert "POSTGRES_USER" in missing_fields_upper
             assert "POSTGRES_PASSWORD" in missing_fields_upper
             assert "POSTGRES_HOST" in missing_fields_upper
+            assert "POSTGRES_PORT" in missing_fields_upper
             assert "POSTGRES_DB" in missing_fields_upper
             assert "REDIS_HOST" in missing_fields_upper
+            assert "REDIS_PORT" in missing_fields_upper
             assert "REDIS_DB" in missing_fields_upper
             assert "OPENAI_API_KEY" in missing_fields_upper
             assert "JWT_SECRET_KEY" in missing_fields_upper

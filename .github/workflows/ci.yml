@@ -73,9 +73,11 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
           POSTGRES_DB: ai_newsletter_test
         ports:
-          - 5432:5432
+          - "5432:5432"
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 10s
@@ -88,8 +90,10 @@ jobs:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
       POSTGRES_DB: ai_newsletter_test
       REDIS_HOST: localhost
+      REDIS_PORT: 6379
       REDIS_DB: 0
       OPENAI_API_KEY: test_key_not_used
       JWT_SECRET_KEY: test_secret_key_for_ci

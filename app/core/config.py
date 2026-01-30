@@ -25,8 +25,10 @@ class Settings(BaseSettings):
     postgres_user: str = Field(..., description="Postgres user (required)")
     postgres_password: str = Field(..., description="Postgres password (required)")
     postgres_host: str = Field(..., description="Postgres host (required)")
+    postgres_port: int = Field(..., description="Postgres port (required)")
     postgres_db: str = Field(..., description="Postgres database name (required)")
     redis_host: str = Field(..., description="Redis host (required)")
+    redis_port: int = Field(..., description="Redis port (required)")
     redis_db: int = Field(..., description="Redis database number (required)")
     openai_api_key: str = Field(..., description="OpenAI API key (required)")
     jwt_secret_key: str = Field(..., description="JWT secret key for token signing (required)")
@@ -53,10 +55,13 @@ class Settings(BaseSettings):
                 username=self.postgres_user,
                 password=self.postgres_password,
                 host=self.postgres_host,
+                port=self.postgres_port,
                 path=self.postgres_db,
             )
         if self.rate_limit_storage_url is None:
-            self.rate_limit_storage_url = f"redis://{self.redis_host}:6379/{self.redis_db}"
+            self.rate_limit_storage_url = (
+                f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+            )
         return self
 
     # Optional environment variables (defaults provided)
