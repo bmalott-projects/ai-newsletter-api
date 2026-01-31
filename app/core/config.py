@@ -15,6 +15,16 @@ class MissingRequiredSettingsError(Exception):
         super().__init__(f"Missing required environment variables: {', '.join(missing_fields)}")
 
 
+class InvalidSettingsError(Exception):
+    """Raised when settings are invalid."""
+
+    def __init__(self, invalid_fields: list[tuple[str, str]]) -> None:
+        """Initialize with list of invalid field names and messages."""
+        self.invalid_fields = invalid_fields
+        summary = ", ".join(f"{field}: {message}" for field, message in invalid_fields)
+        super().__init__(f"Invalid environment variables: {summary}")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -114,6 +124,17 @@ def validate_settings() -> Settings:
 
         if missing_fields:
             raise MissingRequiredSettingsError(missing_fields) from e
+
+        invalid_fields: list[tuple[str, str]] = []
+        for error in e.errors():
+            if error["type"] == "missing":
+                continue
+            field_path = ".".join(str(part) for part in error.get("loc", []))
+            message = error.get("msg", "Invalid value")
+            invalid_fields.append((field_path or "unknown", message))
+
+        if invalid_fields:
+            raise InvalidSettingsError(invalid_fields) from e
 
         # Re-raise if it's a different validation error
         raise
