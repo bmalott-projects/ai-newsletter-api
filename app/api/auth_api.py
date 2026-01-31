@@ -37,6 +37,7 @@ router = APIRouter()
 
 @router.post(
     "/register",
+    summary="Register user",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -71,6 +72,7 @@ async def register(
 
 @router.post(
     "/login",
+    summary="Log in",
     response_model=Token,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -111,6 +113,7 @@ async def login(
 
 @router.get(
     "/me",
+    summary="Get current user",
     response_model=UserResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -127,6 +130,7 @@ async def get_me(
 
 @router.delete(
     "/me",
+    summary="Delete current user",
     response_model=DeleteUserResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
