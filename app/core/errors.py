@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -26,6 +26,28 @@ ERROR_CODE_BY_STATUS: dict[int, str] = {
 
 class ErrorResponse(BaseModel):
     """Standardized error response payload."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "error": "validation_error",
+                    "message": "Request validation failed",
+                    "details": [
+                        {
+                            "loc": ["body", "email"],
+                            "msg": "value is not a valid email address",
+                            "type": "value_error.email",
+                        }
+                    ],
+                },
+                {
+                    "error": "unauthorized",
+                    "message": "Could not validate credentials",
+                },
+            ]
+        }
+    )
 
     error: str
     message: str

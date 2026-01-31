@@ -34,14 +34,125 @@ def get_llm_client() -> LLMClient:
 @router.post(
     "/extract",
     summary="Extract interests to add/remove",
+    description="Analyze a prompt and return interests to add or remove.",
     response_model=InterestExtractionResult,
     responses={
-        status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
-        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
-        status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
-        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": "Invalid prompt",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_prompt": {
+                            "summary": "Prompt rejected",
+                            "value": {
+                                "error": "invalid_prompt",
+                                "message": "Prompt contains disallowed instruction patterns.",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid token",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "unauthorized": {
+                            "summary": "Unauthorized",
+                            "value": {
+                                "error": "unauthorized",
+                                "message": "Could not validate credentials",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "model": ErrorResponse,
+            "description": "Invalid request body",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "validation_error": {
+                            "summary": "Request validation failed",
+                            "value": {
+                                "error": "validation_error",
+                                "message": "Request validation failed",
+                                "details": [
+                                    {
+                                        "loc": ["body", "prompt"],
+                                        "msg": "String should have at least 1 character",
+                                        "type": "string_too_short",
+                                    }
+                                ],
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            "model": ErrorResponse,
+            "description": "Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "rate_limited": {
+                            "summary": "Too many requests",
+                            "value": {
+                                "error": "rate_limited",
+                                "message": "Too many requests",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_502_BAD_GATEWAY: {
+            "model": ErrorResponse,
+            "description": "LLM authentication or response error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "llm_auth_failed": {
+                            "summary": "LLM auth failed",
+                            "value": {
+                                "error": "llm_auth_failed",
+                                "message": "LLM authentication failed.",
+                            },
+                        },
+                        "llm_response_invalid": {
+                            "summary": "LLM response invalid",
+                            "value": {
+                                "error": "llm_response_invalid",
+                                "message": "LLM response did not match expected format.",
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": "LLM unavailable",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "llm_unavailable": {
+                            "summary": "LLM unavailable",
+                            "value": {
+                                "error": "llm_unavailable",
+                                "message": "LLM service error. Try again later.",
+                            },
+                        }
+                    }
+                }
+            },
+        },
     },
 )
 @limit(INTEREST_EXTRACT_RATE_LIMIT, key_func=rate_limit_user_or_ip_key)
