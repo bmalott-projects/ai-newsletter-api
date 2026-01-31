@@ -38,12 +38,61 @@ router = APIRouter()
 @router.post(
     "/register",
     summary="Register user",
+    description="Create a new user account with email and password.",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
-        status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": "Email already registered",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "user_exists": {
+                            "summary": "User already exists",
+                            "value": {
+                                "error": "user_exists",
+                                "message": "Email already registered",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "model": ErrorResponse,
+            "description": "Invalid registration input",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "password_too_long": {
+                            "summary": "Password too long",
+                            "value": {
+                                "error": "password_too_long",
+                                "message": "Password must not exceed 72 bytes when UTF-8 encoded",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            "model": ErrorResponse,
+            "description": "Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "rate_limited": {
+                            "summary": "Too many requests",
+                            "value": {
+                                "error": "rate_limited",
+                                "message": "Too many requests",
+                            },
+                        }
+                    }
+                }
+            },
+        },
     },
 )
 @limit(AUTH_REGISTER_RATE_LIMIT, key_func=rate_limit_ip_key)
@@ -73,11 +122,60 @@ async def register(
 @router.post(
     "/login",
     summary="Log in",
+    description="Authenticate credentials and return a bearer access token.",
     response_model=Token,
     responses={
-        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": ErrorResponse,
+            "description": "Invalid credentials",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_credentials": {
+                            "summary": "Invalid email or password",
+                            "value": {
+                                "error": "invalid_credentials",
+                                "message": "Incorrect email or password",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {
+            "model": ErrorResponse,
+            "description": "Invalid login input",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "password_too_long": {
+                            "summary": "Password too long",
+                            "value": {
+                                "error": "password_too_long",
+                                "message": "Password must not exceed 72 bytes when UTF-8 encoded",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            "model": ErrorResponse,
+            "description": "Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "rate_limited": {
+                            "summary": "Too many requests",
+                            "value": {
+                                "error": "rate_limited",
+                                "message": "Too many requests",
+                            },
+                        }
+                    }
+                }
+            },
+        },
     },
 )
 @limit(AUTH_LOGIN_RATE_LIMIT, key_func=rate_limit_ip_key)
@@ -114,10 +212,43 @@ async def login(
 @router.get(
     "/me",
     summary="Get current user",
+    description="Return the user for the provided bearer token.",
     response_model=UserResponse,
     responses={
-        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid token",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "unauthorized": {
+                            "summary": "Unauthorized",
+                            "value": {
+                                "error": "unauthorized",
+                                "message": "Could not validate credentials",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            "model": ErrorResponse,
+            "description": "Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "rate_limited": {
+                            "summary": "Too many requests",
+                            "value": {
+                                "error": "rate_limited",
+                                "message": "Too many requests",
+                            },
+                        }
+                    }
+                }
+            },
+        },
     },
 )
 async def get_me(
@@ -131,10 +262,43 @@ async def get_me(
 @router.delete(
     "/me",
     summary="Delete current user",
+    description="Delete the current user and associated data.",
     response_model=DeleteUserResponse,
     responses={
-        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": ErrorResponse,
+            "description": "Missing or invalid token",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "unauthorized": {
+                            "summary": "Unauthorized",
+                            "value": {
+                                "error": "unauthorized",
+                                "message": "Could not validate credentials",
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        status.HTTP_429_TOO_MANY_REQUESTS: {
+            "model": ErrorResponse,
+            "description": "Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "rate_limited": {
+                            "summary": "Too many requests",
+                            "value": {
+                                "error": "rate_limited",
+                                "message": "Too many requests",
+                            },
+                        }
+                    }
+                }
+            },
+        },
     },
 )
 @limit(AUTH_DELETE_RATE_LIMIT, key_func=rate_limit_user_or_ip_key)
