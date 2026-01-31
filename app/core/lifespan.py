@@ -14,7 +14,7 @@ from app.db.session import get_engine
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """FastAPI lifespan context manager for startup/shutdown events."""
     try:
-        # Startup
+        # Startup checks
         if settings.environment != "test":
             await verify_database_connection()
         yield
