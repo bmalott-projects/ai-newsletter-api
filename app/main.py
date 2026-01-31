@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ExceptionHandler
 
 from app.api.router import router as api_router
-from app.core.config import MissingRequiredSettingsError
+from app.core.config import InvalidSettingsError, MissingRequiredSettingsError
 from app.core.errors import (
     http_exception_handler,
     rate_limit_exception_handler,
@@ -33,6 +33,15 @@ except MissingRequiredSettingsError as e:
         print(f"  - {field}", file=sys.stderr)
     print(
         "\nPlease set these in your .env file (see env.example for reference)",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+except InvalidSettingsError as e:
+    print("ERROR: Invalid environment variable values:", file=sys.stderr)
+    for field, message in e.invalid_fields:
+        print(f"  - {field}: {message}", file=sys.stderr)
+    print(
+        "\nPlease update these in your .env file (see env.example for reference)",
         file=sys.stderr,
     )
     sys.exit(1)

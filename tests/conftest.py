@@ -21,6 +21,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+os.environ.setdefault("ENVIRONMENT", "test")
+
 from app.core import config
 from app.core.rate_limit import limiter
 from app.db.base import Base
