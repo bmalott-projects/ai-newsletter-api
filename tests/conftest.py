@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from typing import cast
 from urllib.parse import urlparse
 
@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core import config
+from app.core.rate_limit import limiter
 from app.db.base import Base
 from app.main import create_app
 
@@ -131,6 +132,14 @@ async def db_session(
             await session.commit()
 
 
+@pytest.fixture(scope="function")
+def reset_rate_limits() -> Iterator[None]:
+    """Reset rate limits between tests."""
+    limiter.reset()
+    yield
+    limiter.reset()
+
+
 @pytest_asyncio.fixture(scope="session")
 async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> AsyncIterator[FastAPI]:
     """Creates FastAPI app for async tests with test database settings.
@@ -149,7 +158,9 @@ async def async_app(test_session_maker: async_sessionmaker[AsyncSession]) -> Asy
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_http_client(async_app: FastAPI) -> AsyncIterator[AsyncClient]:
+async def async_http_client(
+    async_app: FastAPI, reset_rate_limits: Iterator[None]
+) -> AsyncIterator[AsyncClient]:
     """Creates an async http client."""
     transport = ASGITransport(app=async_app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -176,6 +187,6 @@ def app() -> FastAPI:
 
 
 @pytest.fixture(scope="function")
-def http_client(app: FastAPI) -> TestClient:
+def http_client(app: FastAPI, reset_rate_limits: Iterator[None]) -> TestClient:
     """Creates a synchronous http client (for synchronous tests, can run in parallel)."""
     return TestClient(app)

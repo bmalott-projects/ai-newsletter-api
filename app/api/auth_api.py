@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas.auth import (
@@ -12,6 +12,14 @@ from app.api.schemas.auth import (
 )
 from app.core.auth import create_access_token, get_current_user
 from app.core.errors import ErrorResponse, build_http_error
+from app.core.rate_limit import (
+    AUTH_DELETE_RATE_LIMIT,
+    AUTH_LOGIN_RATE_LIMIT,
+    AUTH_REGISTER_RATE_LIMIT,
+    limit,
+    rate_limit_ip_key,
+    rate_limit_user_or_ip_key,
+)
 from app.db.models.user import User
 from app.db.session import get_db, get_db_transaction
 from app.services.auth_service import (
@@ -34,10 +42,14 @@ router = APIRouter()
     responses={
         status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
     },
 )
+@limit(AUTH_REGISTER_RATE_LIMIT, key_func=rate_limit_ip_key)
 async def register(
-    user_data: UserRegister, db: AsyncSession = Depends(get_db_transaction)
+    request: Request,
+    user_data: UserRegister,
+    db: AsyncSession = Depends(get_db_transaction),
 ) -> UserResponse:
     """Register a new user."""
     try:
@@ -63,9 +75,15 @@ async def register(
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
     },
 )
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)) -> Token:
+@limit(AUTH_LOGIN_RATE_LIMIT, key_func=rate_limit_ip_key)
+async def login(
+    request: Request,
+    credentials: UserLogin,
+    db: AsyncSession = Depends(get_db),
+) -> Token:
     """Authenticate user and return JWT token."""
     try:
         user = await authenticate_user(credentials.email, credentials.password, db)
@@ -94,9 +112,15 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)) -> T
 @router.get(
     "/me",
     response_model=UserResponse,
-    responses={status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse}},
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
+    },
 )
-async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
+async def get_me(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
     """Get current authenticated user information."""
     return UserResponse.model_validate(current_user)
 
@@ -104,9 +128,14 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
 @router.delete(
     "/me",
     response_model=DeleteUserResponse,
-    responses={status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse}},
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
+        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
+    },
 )
+@limit(AUTH_DELETE_RATE_LIMIT, key_func=rate_limit_user_or_ip_key)
 async def delete_me(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_transaction),
 ) -> DeleteUserResponse:
