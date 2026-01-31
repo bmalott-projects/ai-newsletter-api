@@ -41,7 +41,6 @@ def test_settings_class() -> SettingsClass:
 
     class TestSettings(BaseSettings):
         model_config = SettingsConfigDict(env_file=None, extra="ignore")
-        api_port: int = Field(..., description="API port (required)")
         postgres_user: str = Field(..., description="Postgres user (required)")
         postgres_password: str = Field(..., description="Postgres password (required)")
         postgres_host: str = Field(..., description="Postgres host (required)")
@@ -95,7 +94,6 @@ def test_settings_class() -> SettingsClass:
 @pytest.fixture
 def required_env_vars(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fixture that sets all required environment variables for tests."""
-    monkeypatch.setenv("API_PORT", "8000")
     monkeypatch.setenv("POSTGRES_USER", "user")
     monkeypatch.setenv("POSTGRES_PASSWORD", "pass")
     monkeypatch.setenv("POSTGRES_HOST", "localhost")
@@ -338,7 +336,6 @@ class TestSettingsValidation:
 
         try:
             # Remove required env vars to trigger the error
-            monkeypatch.delenv("API_PORT", raising=False)
             monkeypatch.delenv("POSTGRES_USER", raising=False)
             monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
             monkeypatch.delenv("POSTGRES_HOST", raising=False)
@@ -359,7 +356,6 @@ class TestSettingsValidation:
             missing_fields = exc_info.value.missing_fields
             assert len(missing_fields) > 0
             missing_fields_upper = {field.upper() for field in missing_fields}
-            assert "API_PORT" in missing_fields_upper
             assert "POSTGRES_USER" in missing_fields_upper
             assert "POSTGRES_PASSWORD" in missing_fields_upper
             assert "POSTGRES_HOST" in missing_fields_upper

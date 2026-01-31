@@ -21,7 +21,6 @@ class Settings(BaseSettings):
     )
 
     # Required environment variables
-    api_port: int = Field(..., description="API port (required)")
     postgres_user: str = Field(..., description="Postgres user (required)")
     postgres_password: str = Field(..., description="Postgres password (required)")
     postgres_host: str = Field(..., description="Postgres host (required)")
