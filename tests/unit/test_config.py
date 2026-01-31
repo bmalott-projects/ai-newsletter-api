@@ -96,7 +96,7 @@ def test_settings_class() -> SettingsClass:
             has_lower = re.search(r"[a-z]", secret) is not None
             has_upper = re.search(r"[A-Z]", secret) is not None
             has_digit = re.search(r"\d", secret) is not None
-            has_symbol = re.search(r"[^\w]", secret) is not None
+            has_symbol = re.search(r"[^\w\s]", secret) is not None
             return has_lower and has_upper and has_digit and has_symbol
 
         @model_validator(mode="after")
