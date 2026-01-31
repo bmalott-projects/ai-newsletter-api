@@ -46,7 +46,7 @@ class TestRateLimits:
         login_response = await async_http_client.post("/api/auth/login", json=user_data)
         token = login_response.json()["access_token"]
 
-        async_app.dependency_overrides[get_llm_client] = MockLLMClient
+        async_app.dependency_overrides[get_llm_client] = lambda: MockLLMClient()
 
         statuses: list[int] = []
         for i in range(6):
