@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from pydantic import Field, PostgresDsn, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -68,6 +70,27 @@ class Settings(BaseSettings):
     environment: str = "local"
     log_level: str = "INFO"
     jwt_algorithm: str = "HS256"
+
+    @staticmethod
+    def _is_strong_jwt_secret(secret: str) -> bool:
+        if len(secret) < 32:
+            return False
+        has_lower = re.search(r"[a-z]", secret) is not None
+        has_upper = re.search(r"[A-Z]", secret) is not None
+        has_digit = re.search(r"\d", secret) is not None
+        has_symbol = re.search(r"[^\w]", secret) is not None
+        return has_lower and has_upper and has_digit and has_symbol
+
+    @model_validator(mode="after")
+    def validate_jwt_secret_strength(self) -> Settings:
+        if self.environment == "test":
+            return self
+        if not self._is_strong_jwt_secret(self.jwt_secret_key):
+            raise ValueError(
+                "JWT secret key must be at least 32 characters and include upper, lower, "
+                "number, and symbol characters."
+            )
+        return self
 
 
 def validate_settings() -> Settings:
