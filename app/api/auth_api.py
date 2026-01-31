@@ -10,8 +10,14 @@ from app.api.schemas.auth import (
     UserRegister,
     UserResponse,
 )
+from app.api.openapi_responses import (
+    ErrorExample,
+    error_responses,
+    rate_limited_response,
+    unauthorized_response,
+)
 from app.core.auth import create_access_token, get_current_user
-from app.core.errors import ErrorResponse, build_http_error
+from app.core.errors import build_http_error
 from app.core.rate_limit import (
     AUTH_DELETE_RATE_LIMIT,
     AUTH_LOGIN_RATE_LIMIT,
@@ -42,57 +48,23 @@ router = APIRouter()
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
-        status.HTTP_400_BAD_REQUEST: {
-            "model": ErrorResponse,
-            "description": "Email already registered",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "user_exists": {
-                            "summary": "User already exists",
-                            "value": {
-                                "error": "user_exists",
-                                "message": "Email already registered",
-                            },
-                        }
-                    }
-                }
-            },
-        },
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {
-            "model": ErrorResponse,
-            "description": "Invalid registration input",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "password_too_long": {
-                            "summary": "Password too long",
-                            "value": {
-                                "error": "password_too_long",
-                                "message": "Password must not exceed 72 bytes when UTF-8 encoded",
-                            },
-                        }
-                    }
-                }
-            },
-        },
-        status.HTTP_429_TOO_MANY_REQUESTS: {
-            "model": ErrorResponse,
-            "description": "Rate limit exceeded",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "rate_limited": {
-                            "summary": "Too many requests",
-                            "value": {
-                                "error": "rate_limited",
-                                "message": "Too many requests",
-                            },
-                        }
-                    }
-                }
-            },
-        },
+        **error_responses(
+            ErrorExample(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error="user_exists",
+                message="Email already registered",
+                description="Email already registered",
+                summary="User already exists",
+            ),
+            ErrorExample(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                error="password_too_long",
+                message="Password must not exceed 72 bytes when UTF-8 encoded",
+                description="Invalid registration input",
+                summary="Password too long",
+            ),
+        ),
+        **rate_limited_response(),
     },
 )
 @limit(AUTH_REGISTER_RATE_LIMIT, key_func=rate_limit_ip_key)
@@ -125,57 +97,23 @@ async def register(
     description="Authenticate credentials and return a bearer access token.",
     response_model=Token,
     responses={
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": ErrorResponse,
-            "description": "Invalid credentials",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "invalid_credentials": {
-                            "summary": "Invalid email or password",
-                            "value": {
-                                "error": "invalid_credentials",
-                                "message": "Incorrect email or password",
-                            },
-                        }
-                    }
-                }
-            },
-        },
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {
-            "model": ErrorResponse,
-            "description": "Invalid login input",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "password_too_long": {
-                            "summary": "Password too long",
-                            "value": {
-                                "error": "password_too_long",
-                                "message": "Password must not exceed 72 bytes when UTF-8 encoded",
-                            },
-                        }
-                    }
-                }
-            },
-        },
-        status.HTTP_429_TOO_MANY_REQUESTS: {
-            "model": ErrorResponse,
-            "description": "Rate limit exceeded",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "rate_limited": {
-                            "summary": "Too many requests",
-                            "value": {
-                                "error": "rate_limited",
-                                "message": "Too many requests",
-                            },
-                        }
-                    }
-                }
-            },
-        },
+        **error_responses(
+            ErrorExample(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                error="invalid_credentials",
+                message="Incorrect email or password",
+                description="Invalid credentials",
+                summary="Invalid email or password",
+            ),
+            ErrorExample(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                error="password_too_long",
+                message="Password must not exceed 72 bytes when UTF-8 encoded",
+                description="Invalid login input",
+                summary="Password too long",
+            ),
+        ),
+        **rate_limited_response(),
     },
 )
 @limit(AUTH_LOGIN_RATE_LIMIT, key_func=rate_limit_ip_key)
@@ -215,40 +153,8 @@ async def login(
     description="Return the user for the provided bearer token.",
     response_model=UserResponse,
     responses={
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": ErrorResponse,
-            "description": "Missing or invalid token",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "unauthorized": {
-                            "summary": "Unauthorized",
-                            "value": {
-                                "error": "unauthorized",
-                                "message": "Could not validate credentials",
-                            },
-                        }
-                    }
-                }
-            },
-        },
-        status.HTTP_429_TOO_MANY_REQUESTS: {
-            "model": ErrorResponse,
-            "description": "Rate limit exceeded",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "rate_limited": {
-                            "summary": "Too many requests",
-                            "value": {
-                                "error": "rate_limited",
-                                "message": "Too many requests",
-                            },
-                        }
-                    }
-                }
-            },
-        },
+        **unauthorized_response(),
+        **rate_limited_response(),
     },
 )
 async def get_me(
@@ -265,40 +171,8 @@ async def get_me(
     description="Delete the current user and associated data.",
     response_model=DeleteUserResponse,
     responses={
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": ErrorResponse,
-            "description": "Missing or invalid token",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "unauthorized": {
-                            "summary": "Unauthorized",
-                            "value": {
-                                "error": "unauthorized",
-                                "message": "Could not validate credentials",
-                            },
-                        }
-                    }
-                }
-            },
-        },
-        status.HTTP_429_TOO_MANY_REQUESTS: {
-            "model": ErrorResponse,
-            "description": "Rate limit exceeded",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "rate_limited": {
-                            "summary": "Too many requests",
-                            "value": {
-                                "error": "rate_limited",
-                                "message": "Too many requests",
-                            },
-                        }
-                    }
-                }
-            },
-        },
+        **unauthorized_response(),
+        **rate_limited_response(),
     },
 )
 @limit(AUTH_DELETE_RATE_LIMIT, key_func=rate_limit_user_or_ip_key)
