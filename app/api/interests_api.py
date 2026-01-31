@@ -2,9 +2,15 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, status
 
+from app.api.openapi_responses import (
+    ErrorExample,
+    error_responses,
+    rate_limited_response,
+    unauthorized_response,
+)
 from app.api.schemas.interests import InterestExtractionRequest
 from app.core.auth import get_current_user
-from app.core.errors import ErrorResponse, build_http_error
+from app.core.errors import build_http_error
 from app.core.prompt_sanitizer import PromptValidationError, sanitize_prompt
 from app.core.rate_limit import (
     INTEREST_EXTRACT_RATE_LIMIT,
@@ -33,14 +39,56 @@ def get_llm_client() -> LLMClient:
 
 @router.post(
     "/extract",
+    summary="Extract interests to add/remove",
+    description="Analyze a prompt and return interests to add or remove.",
     response_model=InterestExtractionResult,
     responses={
-        status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
-        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
-        status.HTTP_429_TOO_MANY_REQUESTS: {"model": ErrorResponse},
-        status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
-        status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
+        **error_responses(
+            ErrorExample(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error="invalid_prompt",
+                message="Prompt contains disallowed instruction patterns.",
+                description="Invalid prompt",
+                summary="Prompt rejected",
+            ),
+            ErrorExample(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                error="validation_error",
+                message="Request validation failed",
+                description="Invalid request body",
+                summary="Request validation failed",
+                details=[
+                    {
+                        "loc": ["body", "prompt"],
+                        "msg": "String should have at least 1 character",
+                        "type": "string_too_short",
+                    }
+                ],
+            ),
+            ErrorExample(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                error="llm_auth_failed",
+                message="LLM authentication failed.",
+                description="LLM authentication or response error",
+                summary="LLM auth failed",
+            ),
+            ErrorExample(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                error="llm_response_invalid",
+                message="LLM response did not match expected format.",
+                description="LLM authentication or response error",
+                summary="LLM response invalid",
+            ),
+            ErrorExample(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                error="llm_unavailable",
+                message="LLM service error. Try again later.",
+                description="LLM unavailable",
+                summary="LLM unavailable",
+            ),
+        ),
+        **unauthorized_response(),
+        **rate_limited_response(),
     },
 )
 @limit(INTEREST_EXTRACT_RATE_LIMIT, key_func=rate_limit_user_or_ip_key)
