@@ -33,7 +33,7 @@ def get_llm_client() -> LLMClient:
 
 @router.post(
     "/extract",
-    summary="Extract interests",
+    summary="Extract interests to add/remove",
     response_model=InterestExtractionResult,
     responses={
         status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
