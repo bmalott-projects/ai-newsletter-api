@@ -220,6 +220,7 @@ class TestSettingsValidation:
     @pytest.mark.parametrize(
         "weak_secret",
         [
+            "too_Short123!",
             "lowercase32charswithnumberand1symbol!",
             "UPPERCASE32CHARSWITHNUMBERAND1SYMBOL!",
             "MixedCaseWithSymbolsButNoDigits!@#$",
