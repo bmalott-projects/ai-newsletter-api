@@ -85,6 +85,27 @@ async def test_extract_interests_success(
 
 
 @pytest.mark.asyncio
+async def test_extract_interests_normalizes_lists(
+    llm_client: OpenAIClient, mock_openai_client: AsyncMock
+) -> None:
+    """Test interest extraction trims, de-duplicates, and removes empties."""
+    # Arrange
+    response_data: dict[str, list[str]] = {
+        "add_interests": [" Python ", "", "python", "FastAPI", "FastAPI ", "  "],
+        "remove_interests": ["JavaScript", " javascript ", "\n", "TypeScript", "typescript"],
+    }
+    mock_response = _create_chat_completion(json.dumps(response_data))
+    mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+    # Act
+    result = await llm_client.extract_interests("Clean up interests")
+
+    # Assert
+    assert result.add_interests == ["Python", "FastAPI"]
+    assert result.remove_interests == ["JavaScript", "TypeScript"]
+
+
+@pytest.mark.asyncio
 async def test_extract_interests_empty_result(
     llm_client: OpenAIClient, mock_openai_client: AsyncMock
 ) -> None:
