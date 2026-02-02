@@ -25,9 +25,9 @@ class InterestExtractionResult(BaseModel):
             cleaned = item.strip()
             if not cleaned:
                 continue
-            key = cleaned.casefold()
-            if key in seen:
+            normalized_key = cleaned.casefold()
+            if normalized_key in seen:
                 continue
-            seen.add(key)
+            seen.add(normalized_key)
             normalized.append(cleaned)
         return normalized
