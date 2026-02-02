@@ -93,8 +93,6 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_jwt_secret_strength(self) -> Settings:
-        if self.environment == "test":
-            return self
         if not self._is_strong_jwt_secret(self.jwt_secret_key):
             raise ValueError(
                 "JWT secret key must be at least 32 characters and include upper, lower, "
