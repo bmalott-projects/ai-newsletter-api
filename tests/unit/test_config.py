@@ -4,91 +4,28 @@ from __future__ import annotations
 
 import importlib
 import sys
-from typing import Any, Protocol, cast
+from collections.abc import Callable, Iterator
+from typing import cast
 
 import pytest
-from pydantic import Field, PostgresDsn, ValidationError, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import ValidationError
 
-
-class SettingsProtocol(Protocol):
-    postgres_user: str
-    postgres_password: str
-    postgres_host: str
-    postgres_port: int
-    postgres_db: str
-    redis_host: str
-    redis_port: int
-    redis_db: int
-    database_url: PostgresDsn
-    rate_limit_storage_url: str
-    openai_api_key: str
-    jwt_secret_key: str
-    jwt_access_token_expire_minutes: int
-    app_name: str
-    environment: str
-    log_level: str
-    jwt_algorithm: str
-
-
-class SettingsClass(Protocol):
-    def __call__(self, **kwargs: Any) -> SettingsProtocol: ...
+from app.core import config
+from app.core.config import Settings
 
 
 @pytest.fixture
-def test_settings_class() -> SettingsClass:
-    """Fixture that provides a TestSettings class without .env file loading."""
-
-    class TestSettings(BaseSettings):
-        model_config = SettingsConfigDict(env_file=None, extra="ignore")
-        postgres_user: str = Field(..., description="Postgres user (required)")
-        postgres_password: str = Field(..., description="Postgres password (required)")
-        postgres_host: str = Field(..., description="Postgres host (required)")
-        postgres_port: int = Field(..., description="Postgres port (required)")
-        postgres_db: str = Field(..., description="Postgres database name (required)")
-        redis_host: str = Field(..., description="Redis host (required)")
-        redis_port: int = Field(..., description="Redis port (required)")
-        redis_db: int = Field(..., description="Redis database number (required)")
-        openai_api_key: str = Field(..., description="OpenAI API key (required)")
-        jwt_secret_key: str = Field(..., description="JWT secret key for token signing (required)")
-        jwt_access_token_expire_minutes: int = Field(
-            ..., description="JWT token expiration in minutes (required)"
-        )
-
-        # Database/Redis urls built from components
-        database_url: PostgresDsn | None = Field(
-            default=None,
-            description="Database connection URL",
-        )
-        rate_limit_storage_url: str | None = Field(
-            default=None,
-            description="Rate limit storage URL",
-        )
-
-        @model_validator(mode="after")
-        def build_derived_urls(self) -> TestSettings:
-            if self.database_url is None:
-                self.database_url = PostgresDsn.build(
-                    scheme="postgresql+asyncpg",
-                    username=self.postgres_user,
-                    password=self.postgres_password,
-                    host=self.postgres_host,
-                    port=self.postgres_port,
-                    path=self.postgres_db,
-                )
-            if self.rate_limit_storage_url is None:
-                self.rate_limit_storage_url = (
-                    f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
-                )
-            return self
-
-        # Optional fields with defaults
-        app_name: str = "ai-newsletter-api"
-        environment: str = "local"
-        log_level: str = "INFO"
-        jwt_algorithm: str = "HS256"
-
-    return cast(SettingsClass, TestSettings)
+def test_settings_class() -> Iterator[Callable[[], Settings]]:
+    """Fixture that provides the real Settings class without .env loading."""
+    original_model_config = config.Settings.model_config
+    config.Settings.model_config = {
+        **original_model_config,
+        "env_file": None,
+    }
+    try:
+        yield cast(Callable[[], Settings], config.Settings)
+    finally:
+        config.Settings.model_config = original_model_config
 
 
 @pytest.fixture
@@ -115,7 +52,7 @@ class TestSettingsValidation:
     """Test settings validation and error handling."""
 
     def test_settings_loads_successfully(
-        self, test_settings_class: SettingsClass, required_env_vars: None
+        self, test_settings_class: Callable[[], Settings], required_env_vars: None
     ) -> None:
         """Test that valid settings load correctly."""
         # Act
@@ -129,7 +66,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_postgres_user(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -146,7 +83,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_postgres_password(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -163,7 +100,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_postgres_host(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -180,7 +117,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_postgres_port(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -197,7 +134,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_postgres_db(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -214,7 +151,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_redis_host(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -231,7 +168,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_redis_port(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -248,7 +185,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_redis_db(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -265,7 +202,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_jwt_secret_key(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -282,7 +219,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_openai_api_key(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -299,7 +236,7 @@ class TestSettingsValidation:
 
     def test_settings_missing_jwt_expire_minutes(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -373,7 +310,7 @@ class TestSettingsValidation:
             config.Settings.model_config = original_model_config
 
     def test_settings_optional_fields_have_defaults(
-        self, test_settings_class: SettingsClass, required_env_vars: None
+        self, test_settings_class: Callable[[], Settings], required_env_vars: None
     ) -> None:
         """Test that optional fields work without env vars."""
         # Act
@@ -387,7 +324,7 @@ class TestSettingsValidation:
 
     def test_settings_invalid_database_url(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -405,7 +342,7 @@ class TestSettingsValidation:
 
     def test_settings_environment_variable_override(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -427,7 +364,7 @@ class TestSettingsValidation:
 
     def test_settings_jwt_expire_minutes_must_be_integer(
         self,
-        test_settings_class: SettingsClass,
+        test_settings_class: Callable[[], Settings],
         required_env_vars: None,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
