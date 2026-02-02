@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from pydantic import Field, PostgresDsn, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,6 +13,16 @@ class MissingRequiredSettingsError(Exception):
         """Initialize with list of missing field names."""
         self.missing_fields = missing_fields
         super().__init__(f"Missing required environment variables: {', '.join(missing_fields)}")
+
+
+class InvalidSettingsError(Exception):
+    """Raised when settings are invalid."""
+
+    def __init__(self, invalid_fields: list[tuple[str, str]]) -> None:
+        """Initialize with list of invalid field names and messages."""
+        self.invalid_fields = invalid_fields
+        summary = ", ".join(f"{field}: {message}" for field, message in invalid_fields)
+        super().__init__(f"Invalid environment variables: {summary}")
 
 
 class Settings(BaseSettings):
@@ -69,6 +81,25 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     jwt_algorithm: str = "HS256"
 
+    @staticmethod
+    def _is_strong_jwt_secret(secret: str) -> bool:
+        if len(secret) < 32:
+            return False
+        has_lower = re.search(r"[a-z]", secret) is not None
+        has_upper = re.search(r"[A-Z]", secret) is not None
+        has_digit = re.search(r"\d", secret) is not None
+        has_symbol = re.search(r"[^a-zA-Z0-9\s]", secret) is not None
+        return has_lower and has_upper and has_digit and has_symbol
+
+    @model_validator(mode="after")
+    def validate_jwt_secret_strength(self) -> Settings:
+        if not self._is_strong_jwt_secret(self.jwt_secret_key):
+            raise ValueError(
+                "JWT secret key must be at least 32 characters and include upper, lower, "
+                "number, and symbol characters."
+            )
+        return self
+
 
 def validate_settings() -> Settings:
     """Validate settings and raise exception for missing required fields.
@@ -91,6 +122,17 @@ def validate_settings() -> Settings:
 
         if missing_fields:
             raise MissingRequiredSettingsError(missing_fields) from e
+
+        invalid_fields: list[tuple[str, str]] = []
+        for error in e.errors():
+            if error["type"] == "missing":
+                continue
+            field_path = ".".join(str(part) for part in error.get("loc", []))
+            message = error.get("msg", "Invalid value")
+            invalid_fields.append((field_path or "unknown", message))
+
+        if invalid_fields:
+            raise InvalidSettingsError(invalid_fields) from e
 
         # Re-raise if it's a different validation error
         raise
