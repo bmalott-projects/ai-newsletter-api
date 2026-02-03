@@ -8,11 +8,7 @@ class InterestExtractionRequest(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "examples": [
-                {
-                    "prompt": "I want more AI and startup news but less crypto and NFTs."
-                }
-            ]
+            "examples": [{"prompt": "I want more AI and startup news but less crypto and NFTs."}]
         }
     )
 

@@ -19,17 +19,22 @@ class ErrorExample:
     example_name: str | None = None
 
 
-def error_responses(*examples: ErrorExample) -> dict[int, dict[str, Any]]:
-    responses: dict[int, dict[str, Any]] = {}
+def error_responses(*examples: ErrorExample) -> dict[int | str, dict[str, Any]]:
+    responses: dict[int | str, dict[str, Any]] = {}
     for example in examples:
-        response = responses.get(example.status_code)
+        response: dict[str, Any] | None = responses.get(example.status_code)
         if response is None:
+            examples_payload: dict[str, dict[str, Any]] = {}
+            content: dict[str, dict[str, dict[str, Any]]] = {
+                "application/json": {"examples": examples_payload}
+            }
             response = {
                 "model": ErrorResponse,
                 "description": example.description,
-                "content": {"application/json": {"examples": {}}},
+                "content": content,
             }
             responses[example.status_code] = response
+        assert response is not None
 
         example_name = example.example_name or example.error
         payload: dict[str, Any] = {
@@ -39,15 +44,19 @@ def error_responses(*examples: ErrorExample) -> dict[int, dict[str, Any]]:
         if example.details is not None:
             payload["details"] = example.details
 
-        response["content"]["application/json"]["examples"][example_name] = {
+        example_entry: dict[str, Any] = {
             "summary": example.summary or example.description,
             "value": payload,
         }
+        response_content: dict[str, dict[str, dict[str, Any]]] = response["content"]
+        response_content["application/json"]["examples"][example_name] = example_entry
 
     return responses
 
 
-def rate_limited_response(description: str = "Rate limit exceeded") -> dict[int, dict[str, Any]]:
+def rate_limited_response(
+    description: str = "Rate limit exceeded",
+) -> dict[int | str, dict[str, Any]]:
     return error_responses(
         ErrorExample(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -59,7 +68,9 @@ def rate_limited_response(description: str = "Rate limit exceeded") -> dict[int,
     )
 
 
-def unauthorized_response(description: str = "Missing or invalid token") -> dict[int, dict[str, Any]]:
+def unauthorized_response(
+    description: str = "Missing or invalid token",
+) -> dict[int | str, dict[str, Any]]:
     return error_responses(
         ErrorExample(
             status_code=status.HTTP_401_UNAUTHORIZED,

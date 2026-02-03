@@ -3,18 +3,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.openapi_responses import (
+    ErrorExample,
+    error_responses,
+    rate_limited_response,
+    unauthorized_response,
+)
 from app.api.schemas.auth import (
     DeleteUserResponse,
     Token,
     UserLogin,
     UserRegister,
     UserResponse,
-)
-from app.api.openapi_responses import (
-    ErrorExample,
-    error_responses,
-    rate_limited_response,
-    unauthorized_response,
 )
 from app.core.auth import create_access_token, get_current_user
 from app.core.errors import build_http_error
@@ -144,7 +144,7 @@ async def login(
 
     access_token = create_access_token(data={"sub": str(user.id)})
 
-    return Token(access_token=access_token)
+    return Token(access_token=access_token, token_type="bearer")
 
 
 @router.get(

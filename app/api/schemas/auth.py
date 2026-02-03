@@ -7,9 +7,7 @@ class UserRegister(BaseModel):
     """Request model for user registration."""
 
     model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [{"email": "alex@example.com", "password": "Password123!"}]
-        }
+        json_schema_extra={"examples": [{"email": "alex@example.com", "password": "Password123!"}]}
     )
 
     email: EmailStr = Field(
@@ -43,9 +41,7 @@ class UserLogin(BaseModel):
     """Request model for user login."""
 
     model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [{"email": "alex@example.com", "password": "Password123!"}]
-        }
+        json_schema_extra={"examples": [{"email": "alex@example.com", "password": "Password123!"}]}
     )
 
     email: EmailStr = Field(
