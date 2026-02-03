@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ExceptionHandler
 
 from app.api.router import router as api_router
-from app.core.config import MissingRequiredSettingsError
+from app.core.config import InvalidSettingsError, MissingRequiredSettingsError
 from app.core.errors import (
     http_exception_handler,
     rate_limit_exception_handler,
@@ -24,6 +24,15 @@ from app.core.lifespan import lifespan
 from app.core.logging import configure_logging
 from app.core.rate_limit import limiter
 
+OPENAPI_TAGS = [
+    {"name": "meta", "description": "Service health and metadata."},
+    {"name": "auth", "description": "Register, authenticate, and manage users."},
+    {
+        "name": "interests",
+        "description": "Extract interests to add or remove from prompts.",
+    },
+]
+
 # Import settings - this may raise MissingRequiredSettingsError
 try:
     from app.core.config import settings
@@ -33,6 +42,15 @@ except MissingRequiredSettingsError as e:
         print(f"  - {field}", file=sys.stderr)
     print(
         "\nPlease set these in your .env file (see env.example for reference)",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+except InvalidSettingsError as e:
+    print("ERROR: Invalid environment variable values:", file=sys.stderr)
+    for field, message in e.invalid_fields:
+        print(f"  - {field}: {message}", file=sys.stderr)
+    print(
+        "\nPlease update these in your .env file (see env.example for reference)",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -53,6 +71,7 @@ def create_app() -> FastAPI:
         version=api_version,
         debug=is_debug_mode,
         lifespan=lifespan,
+        openapi_tags=OPENAPI_TAGS,
     )
     app.add_exception_handler(
         StarletteHTTPException, cast(ExceptionHandler, http_exception_handler)

@@ -6,12 +6,22 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 class UserRegister(BaseModel):
     """Request model for user registration."""
 
-    email: EmailStr = Field(..., max_length=320, description="Valid email address")
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"email": "alex@example.com", "password": "Password123!"}]}
+    )
+
+    email: EmailStr = Field(
+        ...,
+        max_length=320,
+        description="Valid email address",
+        examples=["alex@example.com"],
+    )
     password: str = Field(
         ...,
         min_length=8,
         max_length=50,
         description="Password between 8 and 50 characters",
+        examples=["Password123!"],
     )
 
     @field_validator("password")
@@ -30,12 +40,22 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     """Request model for user login."""
 
-    email: EmailStr = Field(..., max_length=320, description="Valid email address")
+    model_config = ConfigDict(
+        json_schema_extra={"examples": [{"email": "alex@example.com", "password": "Password123!"}]}
+    )
+
+    email: EmailStr = Field(
+        ...,
+        max_length=320,
+        description="Valid email address",
+        examples=["alex@example.com"],
+    )
     password: str = Field(
         ...,
         min_length=8,
         max_length=50,
         description="Password between 8 and 50 characters",
+        examples=["Password123!"],
     )
 
     @field_validator("password")
@@ -54,20 +74,40 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     """Response model for authentication token."""
 
-    access_token: str
-    token_type: str = "bearer"
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    "token_type": "bearer",
+                }
+            ]
+        }
+    )
+
+    access_token: str = Field(
+        ...,
+        description="JWT access token",
+        examples=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."],
+    )
+    token_type: str = Field("bearer", description="Token type", examples=["bearer"])
 
 
 class UserResponse(BaseModel):
     """Response model for user information."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={"examples": [{"id": 123, "email": "alex@example.com"}]},
+    )
 
-    id: int
-    email: str
+    id: int = Field(..., examples=[123])
+    email: str = Field(..., examples=["alex@example.com"])
 
 
 class DeleteUserResponse(BaseModel):
     """Response model for user deletion."""
 
-    deleted_user_id: int
+    model_config = ConfigDict(json_schema_extra={"examples": [{"deleted_user_id": 123}]})
+
+    deleted_user_id: int = Field(..., examples=[123])

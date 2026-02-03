@@ -40,7 +40,7 @@ def required_env_vars(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("REDIS_PORT", "6379")
     monkeypatch.setenv("REDIS_DB", "0")
     monkeypatch.setenv("OPENAI_API_KEY", "test_key")
-    monkeypatch.setenv("JWT_SECRET_KEY", "test_secret")
+    monkeypatch.setenv("JWT_SECRET_KEY", "StrongTestSecretKey123!@#AbcdXYZ")
     monkeypatch.setenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60")
     monkeypatch.delenv("APP_NAME", raising=False)
     monkeypatch.delenv("ENVIRONMENT", raising=False)
@@ -61,7 +61,7 @@ class TestSettingsValidation:
         # Assert
         assert settings.database_url is not None
         assert settings.openai_api_key == "test_key"
-        assert settings.jwt_secret_key == "test_secret"
+        assert settings.jwt_secret_key == "StrongTestSecretKey123!@#AbcdXYZ"
         assert settings.jwt_access_token_expire_minutes == 60
 
     def test_settings_missing_postgres_user(
@@ -216,6 +216,35 @@ class TestSettingsValidation:
 
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("jwt_secret_key",) for error in errors)
+
+    @pytest.mark.parametrize(
+        "weak_secret",
+        [
+            "too_Short123!",
+            "lowercase32charswithnumberand1symbol!",
+            "UPPERCASE32CHARSWITHNUMBERAND1SYMBOL!",
+            "MixedCaseWithSymbolsButNoDigits!@#$",
+            "MixedCaseWithDigits123ButNoSymbols",
+        ],
+    )
+    def test_settings_rejects_weak_jwt_secret_variants(
+        self,
+        test_settings_class: Callable[[], Settings],
+        required_env_vars: None,
+        monkeypatch: pytest.MonkeyPatch,
+        weak_secret: str,
+    ) -> None:
+        """Test that weak JWT secrets are rejected by strength validator."""
+        monkeypatch.setenv("JWT_SECRET_KEY", weak_secret)
+
+        with pytest.raises(ValidationError) as exc_info:
+            test_settings_class()
+
+        errors = exc_info.value.errors()
+        assert any(
+            "JWT secret key must be at least 32 characters" in error.get("msg", "")
+            for error in errors
+        )
 
     def test_settings_missing_openai_api_key(
         self,
