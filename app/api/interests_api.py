@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, status
 
-from app.api.schemas.interests import InterestExtractionRequest
+from app.api.schemas.interests_request_models import InterestExtractionRequest
 from app.core.auth import get_current_user
 from app.core.errors import ErrorResponse, build_http_error
 from app.core.prompt_sanitizer import PromptValidationError, sanitize_prompt
