@@ -110,9 +110,19 @@ async def test_extract_interests_requires_authentication(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize(
+    "request_payload",
+    [
+        pytest.param({"prompt": ""}, id="empty_prompt"),
+        pytest.param({}, id="missing_prompt"),
+        pytest.param({"prompt": "x" * 501}, id="prompt_too_long"),
+    ],
+)
 @pytest.mark.asyncio
 async def test_extract_interests_validation_error(
-    async_http_client: AsyncClient, async_app: FastAPI
+    async_http_client: AsyncClient,
+    async_app: FastAPI,
+    request_payload: dict[str, object],
 ) -> None:
     """Test validation errors for invalid requests."""
     # Arrange
@@ -132,27 +142,9 @@ async def test_extract_interests_validation_error(
 
     # Act
     response = await async_http_client.post(
-        "/api/interests/extract", json={"prompt": ""}, headers=headers
+        "/api/interests/extract", json=request_payload, headers=headers
     )
-    # Assert
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-    payload = response.json()
-    assert payload["error"] == "validation_error"
-    assert payload["message"] == "Request validation failed"
 
-    # Act
-    response = await async_http_client.post("/api/interests/extract", json={}, headers=headers)
-    # Assert
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-    payload = response.json()
-    assert payload["error"] == "validation_error"
-    assert payload["message"] == "Request validation failed"
-
-    # Act
-    long_prompt = "x" * 501
-    response = await async_http_client.post(
-        "/api/interests/extract", json={"prompt": long_prompt}, headers=headers
-    )
     # Assert
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     payload = response.json()

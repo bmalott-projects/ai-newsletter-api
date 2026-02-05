@@ -77,7 +77,9 @@ class TestUserRegistration:
     async def test_register_invalid_email(self, async_http_client: AsyncClient) -> None:
         """Test that invalid email format is rejected."""
         # Arrange
-        user_data = {"email": "not-an-email", "password": "password123"}
+        user_data = RegisterUserRequest.model_construct(
+            email="not-an-email", password="password123"
+        ).model_dump()
 
         # Act
         response = await async_http_client.post("/api/auth/register", json=user_data)
@@ -89,7 +91,9 @@ class TestUserRegistration:
     async def test_register_password_too_short(self, async_http_client: AsyncClient) -> None:
         """Test that password validation enforces minimum length."""
         # Arrange
-        user_data = {"email": "test@example.com", "password": "short"}  # Less than 8 characters
+        user_data = RegisterUserRequest.model_construct(
+            email="test@example.com", password="short"
+        ).model_dump()
 
         # Act
         response = await async_http_client.post("/api/auth/register", json=user_data)
