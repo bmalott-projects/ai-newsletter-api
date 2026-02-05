@@ -72,6 +72,12 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 
 **Relationship**: Services use Core utilities. For example, `register_user()` (service) calls `get_password_hash()` (core) to hash passwords before storing them.
 
+### API response contracts and layer boundaries
+
+- **API layer** defines all HTTP contracts in `app/api/schemas/`: request models for bodies, response models for success responses. The API does not expose types from inner layers (e.g. LLM schemas) in its routes; it maps service return values into API response models.
+- **API layer** depends only on **service** and **core** for errors. Lower layers (e.g. LLM) raise their own errors; services catch those and re-raise **domain errors** (e.g. `InterestExtractionError`, `AuthenticationError`) with a stable `error_code`. The API then maps these domain errors to HTTP status codes and standardized error payloads (`build_http_error`).
+- **Services** may return types from lower layers (e.g. LLM result types) when the service is already coupled to that layer; the important boundary is that the **API contract** is defined only by API schemas. Success: API receives the service return value and maps it to the response model. Failure: API catches only service (and core) errors and turns them into HTTP responses.
+
 ## Functional Requirements
 
 ### MVP Scope (Current)
@@ -96,12 +102,14 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 ### Core User Flows
 
 1. **Interest Management**
+
    - User provides natural language prompt (e.g., "I'm interested in Python async patterns and React hooks")
    - LLM extracts structured interests: `{add_interests: [...], remove_interests: [...]}`
    - System upserts interests, marks removed ones inactive (soft delete)
    - User can also view/delete interests explicitly via API
 
 2. **Newsletter Generation**
+
    - Expand interests into subtopics (LLM, cheap call)
    - Research via search APIs (Tavily/SerpAPI - non-LLM)
    - Deduplicate: no repeated URLs, embedding similarity vs past content
@@ -169,6 +177,8 @@ The project follows a layered testing approach, testing each layer appropriately
 - **Test environment**: Set `settings.environment = "test"` to skip database connection checks
 - **API tests**: Use `httpx.AsyncClient` + `ASGITransport` for integration testing of endpoints
 - **Mock external services**: Always mock LLM clients, external APIs, and database in unit tests
+- **Arrange, Act, Assert**: Separate tests into Arrange, Act, Assert blocks with comments (some tests might not use all 3)
+- **Request/response models in API tests**: For valid request bodies, form the payload using the API’s request model (e.g. `RegisterUserRequest(...).model_dump()`). For success responses (2xx with a body), validate the response using the API’s response model (e.g. `UserResponse.model_validate(response.json())`). For tests that intentionally send invalid payloads (e.g. validation-error cases), use raw dicts so the test isn't caught by Pydantic's validation layer.
 
 ### What to Test
 

@@ -7,9 +7,17 @@ from __future__ import annotations
 
 import pytest
 
-from app.llm.client import LLMClient
+from app.llm.client import (
+    LLMAuthenticationError,
+    LLMClient,
+    LLMInvalidResponseError,
+    LLMUnavailableError,
+)
 from app.llm.schemas import InterestExtractionResult
-from app.services.interest_service import extract_interests_from_prompt
+from app.services.interest_service import (
+    InterestExtractionError,
+    extract_interests_from_prompt,
+)
 
 
 class MockLLMClient(LLMClient):
@@ -96,3 +104,50 @@ async def test_extract_interests_only_removes() -> None:
     assert result.add_interests == []
     assert result.remove_interests == ["JavaScript", "React"]
     assert mock_client.last_prompt == prompt
+
+
+class ErrorLLMClient(LLMClient):
+    """Mock LLM client that raises a given error."""
+
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    async def extract_interests(self, prompt: str) -> InterestExtractionResult:
+        raise self.error
+
+
+@pytest.mark.asyncio
+async def test_extract_interests_raises_interest_extraction_error_on_llm_unavailable() -> None:
+    """Service translates LLMUnavailableError to InterestExtractionError."""
+    # Arrange
+    mock_client = ErrorLLMClient(LLMUnavailableError("Service unavailable"))
+
+    # Act & Assert
+    with pytest.raises(InterestExtractionError) as exc_info:
+        await extract_interests_from_prompt("test prompt", mock_client)
+    assert exc_info.value.error_code == "llm_unavailable"
+    assert "unavailable" in str(exc_info.value).lower()
+
+
+@pytest.mark.asyncio
+async def test_extract_interests_raises_interest_extraction_error_on_llm_auth_failed() -> None:
+    """Service translates LLMAuthenticationError to InterestExtractionError."""
+    # Arrange
+    mock_client = ErrorLLMClient(LLMAuthenticationError("Auth failed"))
+
+    # Act & Assert
+    with pytest.raises(InterestExtractionError) as exc_info:
+        await extract_interests_from_prompt("test prompt", mock_client)
+    assert exc_info.value.error_code == "llm_auth_failed"
+
+
+@pytest.mark.asyncio
+async def test_extract_interests_raises_interest_extraction_error_on_llm_invalid_response() -> None:
+    """Service translates LLMInvalidResponseError to InterestExtractionError."""
+    # Arrange
+    mock_client = ErrorLLMClient(LLMInvalidResponseError("Invalid JSON"))
+
+    # Act & Assert
+    with pytest.raises(InterestExtractionError) as exc_info:
+        await extract_interests_from_prompt("test prompt", mock_client)
+    assert exc_info.value.error_code == "llm_response_invalid"

@@ -41,7 +41,7 @@ class TestModelRelationships:
     @pytest.mark.asyncio
     async def test_user_interests_relationship(self, db_session: AsyncSession) -> None:
         """Test that User.interests returns related Interest objects."""
-        # Arrange: Create user and interests
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()  # Get user.id
@@ -51,13 +51,13 @@ class TestModelRelationships:
         db_session.add_all([interest1, interest2])
         await db_session.commit()
 
-        # Act: Query user with eagerly loaded interests relationship
+        # Act
         result = await db_session.execute(
             select(User).where(User.id == user.id).options(selectinload(User.interests))
         )
         user_with_interests = result.scalar_one()
 
-        # Assert: Access relationship through ORM
+        # Assert
         assert len(user_with_interests.interests) == 2
         assert {i.name for i in user_with_interests.interests} == {"Python", "FastAPI"}
         assert all(i.user_id == user.id for i in user_with_interests.interests)
@@ -65,7 +65,7 @@ class TestModelRelationships:
     @pytest.mark.asyncio
     async def test_user_newsletters_relationship(self, db_session: AsyncSession) -> None:
         """Test that User.newsletters returns related Newsletter objects."""
-        # Arrange: Create user and newsletters
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -75,13 +75,13 @@ class TestModelRelationships:
         db_session.add_all([newsletter1, newsletter2])
         await db_session.commit()
 
-        # Act: Query user with eagerly loaded newsletters relationship
+        # Act
         result = await db_session.execute(
             select(User).where(User.id == user.id).options(selectinload(User.newsletters))
         )
         user_with_newsletters = result.scalar_one()
 
-        # Assert: Access relationship through ORM
+        # Assert
         assert len(user_with_newsletters.newsletters) == 2
         assert {n.title for n in user_with_newsletters.newsletters} == {
             "Newsletter 1",
@@ -92,7 +92,7 @@ class TestModelRelationships:
     @pytest.mark.asyncio
     async def test_newsletter_content_items_relationship(self, db_session: AsyncSession) -> None:
         """Test that Newsletter.content_items returns related ContentItem objects."""
-        # Arrange: Create user, newsletter, and content items
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -116,7 +116,7 @@ class TestModelRelationships:
         db_session.add_all([item1, item2])
         await db_session.commit()
 
-        # Act: Query newsletter with eagerly loaded content_items relationship
+        # Act
         result = await db_session.execute(
             select(Newsletter)
             .where(Newsletter.id == newsletter.id)
@@ -124,7 +124,7 @@ class TestModelRelationships:
         )
         newsletter_with_items = result.scalar_one()
 
-        # Assert: Access relationship through ORM
+        # Assert
         assert len(newsletter_with_items.content_items) == 2
         assert {item.interest for item in newsletter_with_items.content_items} == {
             "Python",
@@ -137,7 +137,7 @@ class TestModelRelationships:
     @pytest.mark.asyncio
     async def test_interest_user_relationship(self, db_session: AsyncSession) -> None:
         """Test that Interest.user returns parent User."""
-        # Arrange: Create user and interest
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -146,13 +146,13 @@ class TestModelRelationships:
         db_session.add(interest)
         await db_session.commit()
 
-        # Act: Query interest with eagerly loaded user relationship
+        # Act
         result = await db_session.execute(
             select(Interest).where(Interest.id == interest.id).options(selectinload(Interest.user))
         )
         interest_with_user = result.scalar_one()
 
-        # Assert: Access relationship through ORM
+        # Assert
         assert interest_with_user.user is not None
         assert interest_with_user.user.id == user.id
         assert interest_with_user.user.email == user.email
@@ -160,7 +160,7 @@ class TestModelRelationships:
     @pytest.mark.asyncio
     async def test_content_item_newsletter_relationship(self, db_session: AsyncSession) -> None:
         """Test that ContentItem.newsletter returns parent Newsletter."""
-        # Arrange: Create user, newsletter, and content item
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -178,7 +178,7 @@ class TestModelRelationships:
         db_session.add(content_item)
         await db_session.commit()
 
-        # Act: Query content_item with eagerly loaded newsletter relationship
+        # Act
         result = await db_session.execute(
             select(ContentItem)
             .where(ContentItem.id == content_item.id)
@@ -186,7 +186,7 @@ class TestModelRelationships:
         )
         content_item_with_newsletter = result.scalar_one()
 
-        # Assert: Access relationship through ORM
+        # Assert
         assert content_item_with_newsletter.newsletter is not None
         assert content_item_with_newsletter.newsletter.id == newsletter.id
         assert content_item_with_newsletter.newsletter.title == newsletter.title
@@ -198,7 +198,7 @@ class TestCascadeDelete:
     @pytest.mark.asyncio
     async def test_cascade_delete_user_deletes_interests(self, db_session: AsyncSession) -> None:
         """Test that deleting a user deletes all associated interests."""
-        # Arrange: Create user with interests
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -213,7 +213,7 @@ class TestCascadeDelete:
         result = await db_session.execute(select(Interest).where(Interest.user_id == user_id))
         assert len(result.scalars().all()) == 2
 
-        # Act: Delete user (CASCADE should delete interests)
+        # Act
         # Use execute with delete statement to let database handle CASCADE
         await db_session.execute(delete(User).where(User.id == user_id))
         await db_session.commit()
@@ -226,7 +226,7 @@ class TestCascadeDelete:
     @pytest.mark.asyncio
     async def test_cascade_delete_user_deletes_newsletters(self, db_session: AsyncSession) -> None:
         """Test that deleting a user deletes all associated newsletters."""
-        # Arrange: Create user with newsletters
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -241,12 +241,12 @@ class TestCascadeDelete:
         result = await db_session.execute(select(Newsletter).where(Newsletter.user_id == user_id))
         assert len(result.scalars().all()) == 2
 
-        # Act: Delete user (CASCADE should delete newsletters)
+        # Act
         # Use execute with delete statement to let database handle CASCADE
         await db_session.execute(delete(User).where(User.id == user_id))
         await db_session.commit()
 
-        # Assert: Newsletters should be deleted via CASCADE
+        # Assert
         result = await db_session.execute(select(Newsletter).where(Newsletter.user_id == user_id))
         remaining_newsletters = result.scalars().all()
         assert len(remaining_newsletters) == 0
@@ -256,7 +256,7 @@ class TestCascadeDelete:
         self, db_session: AsyncSession
     ) -> None:
         """Test that deleting a newsletter deletes all associated content items."""
-        # Arrange: Create user, newsletter, and content items
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -287,12 +287,12 @@ class TestCascadeDelete:
         )
         assert len(result.scalars().all()) == 2
 
-        # Act: Delete newsletter (CASCADE should delete content items)
+        # Act
         # Use execute with delete statement to let database handle CASCADE
         await db_session.execute(delete(Newsletter).where(Newsletter.id == newsletter_id))
         await db_session.commit()
 
-        # Assert: Content items should be deleted via CASCADE
+        # Assert
         result = await db_session.execute(
             select(ContentItem).where(ContentItem.newsletter_id == newsletter_id)
         )
@@ -306,20 +306,20 @@ class TestConstraints:
     @pytest.mark.asyncio
     async def test_user_email_uniqueness_constraint(self, db_session: AsyncSession) -> None:
         """Test that User model enforces unique email constraint."""
-        # Arrange: Create first user
+        # Arrange
         user1 = User(email=_unique_email(), hashed_password="hashed1")
         db_session.add(user1)
         await db_session.commit()
         user1_email = user1.email
 
-        # Act & Assert: Try to create second user with same email
+        # Act
         user2 = User(email=user1_email, hashed_password="hashed2")
         db_session.add(user2)
 
+        # Assert
         with pytest.raises(IntegrityError):
             await db_session.commit()
 
-        # Rollback for cleanup
         await db_session.rollback()
 
     @pytest.mark.asyncio
@@ -327,7 +327,7 @@ class TestConstraints:
         self, db_session: AsyncSession
     ) -> None:
         """Test that ContentItem model enforces unique source_url constraint."""
-        # Arrange: Create user and newsletter
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -347,7 +347,7 @@ class TestConstraints:
         db_session.add(item1)
         await db_session.commit()
 
-        # Act & Assert: Try to create second item with same source_url
+        # Act
         item2 = ContentItem(
             newsletter_id=newsletter.id,
             interest="FastAPI",
@@ -356,16 +356,16 @@ class TestConstraints:
         )
         db_session.add(item2)
 
+        # Assert
         with pytest.raises(IntegrityError):
             await db_session.commit()
 
-        # Rollback for cleanup
         await db_session.rollback()
 
     @pytest.mark.asyncio
     async def test_interest_requires_valid_user_id(self, db_session: AsyncSession) -> None:
         """Test that Interest model enforces foreign key constraint on user_id."""
-        # Arrange: Create interest with invalid user_id
+        # Arrange
         interest = Interest(user_id=99999, name="Python")  # Non-existent user_id
         db_session.add(interest)
 
@@ -379,15 +379,14 @@ class TestConstraints:
     @pytest.mark.asyncio
     async def test_newsletter_requires_valid_user_id(self, db_session: AsyncSession) -> None:
         """Test that Newsletter model enforces foreign key constraint on user_id."""
-        # Arrange: Create newsletter with invalid user_id
-        newsletter = Newsletter(user_id=99999, title="Test Newsletter")  # Non-existent user_id
+        # Arrange
+        newsletter = Newsletter(user_id=99999, title="Test Newsletter")
         db_session.add(newsletter)
 
-        # Act & Assert: Should raise IntegrityError
+        # Act
         with pytest.raises(IntegrityError):
             await db_session.commit()
 
-        # Rollback for cleanup
         await db_session.rollback()
 
     @pytest.mark.asyncio
@@ -418,30 +417,32 @@ class TestDefaultValues:
     @pytest.mark.asyncio
     async def test_interest_active_default_true(self, db_session: AsyncSession) -> None:
         """Test that new Interest has active=True by default."""
-        # Arrange: Create user
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
 
-        # Act: Create interest without specifying active
+        # Act
         interest = Interest(user_id=user.id, name="Python")
         db_session.add(interest)
         await db_session.commit()
 
-        # Assert: active should be True
+        # Assert
         assert interest.active is True
 
     @pytest.mark.asyncio
     async def test_user_created_at_auto_populated(self, db_session: AsyncSession) -> None:
         """Test that User.created_at is auto-populated."""
-        # Act: Create user
+        # Arrange
         before_creation = datetime.now(UTC)
+
+        # Act
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.commit()
         after_creation = datetime.now(UTC)
 
-        # Assert: created_at should be populated and within reasonable time
+        # Assert
         assert user.created_at is not None
         # created_at is timezone-aware, compare with UTC (allow 1 second tolerance)
         time_diff_before = (user.created_at - before_creation).total_seconds()
@@ -457,14 +458,14 @@ class TestDefaultValues:
         db_session.add(user)
         await db_session.flush()
 
-        # Act: Create newsletter
+        # Act
         before_creation = datetime.now(UTC)
         newsletter = Newsletter(user_id=user.id, title="Test Newsletter")
         db_session.add(newsletter)
         await db_session.commit()
         after_creation = datetime.now(UTC)
 
-        # Assert: created_at should be populated and within reasonable time
+        # Assert
         assert newsletter.created_at is not None
         # created_at is timezone-aware, compare with UTC (allow 1 second tolerance)
         time_diff_before = (newsletter.created_at - before_creation).total_seconds()
@@ -484,12 +485,12 @@ class TestDataIntegrity:
         db_session.add(user)
         await db_session.flush()
 
-        # Act: Create multiple interests
+        # Act
         interests = [Interest(user_id=user.id, name=f"Interest {i}") for i in range(2)]
         db_session.add_all(interests)
         await db_session.commit()
 
-        # Assert: All interests belong to the user
+        # Assert
         result = await db_session.execute(select(Interest).where(Interest.user_id == user.id))
         user_interests = result.scalars().all()
         assert len(user_interests) == 2
@@ -502,12 +503,12 @@ class TestDataIntegrity:
         db_session.add(user)
         await db_session.flush()
 
-        # Act: Create multiple newsletters
+        # Act
         newsletters = [Newsletter(user_id=user.id, title=f"Newsletter {i}") for i in range(2)]
         db_session.add_all(newsletters)
         await db_session.commit()
 
-        # Assert: All newsletters belong to the user
+        # Assert
         result = await db_session.execute(select(Newsletter).where(Newsletter.user_id == user.id))
         user_newsletters = result.scalars().all()
         assert len(user_newsletters) == 2
@@ -517,7 +518,7 @@ class TestDataIntegrity:
         self, db_session: AsyncSession
     ) -> None:
         """Test that a newsletter can have many content items."""
-        # Arrange: Create user and newsletter
+        # Arrange
         user = User(email=_unique_email(), hashed_password="hashed")
         db_session.add(user)
         await db_session.flush()
@@ -526,7 +527,7 @@ class TestDataIntegrity:
         db_session.add(newsletter)
         await db_session.flush()
 
-        # Act: Create multiple content items
+        # Act
         items = [
             ContentItem(
                 newsletter_id=newsletter.id,
@@ -539,7 +540,7 @@ class TestDataIntegrity:
         db_session.add_all(items)
         await db_session.commit()
 
-        # Assert: All content items belong to the newsletter
+        # Assert
         result = await db_session.execute(
             select(ContentItem).where(ContentItem.newsletter_id == newsletter.id)
         )
