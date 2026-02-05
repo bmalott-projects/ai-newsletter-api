@@ -71,13 +71,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing postgres_user raises ValidationError."""
-        # Arrange: Set other required vars but not POSTGRES_USER
+        # Arrange
         monkeypatch.delenv("POSTGRES_USER", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("postgres_user",) for error in errors)
 
@@ -88,13 +89,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing postgres_password raises ValidationError."""
-        # Arrange: Set other required vars but not POSTGRES_PASSWORD
+        # Arrange
         monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("postgres_password",) for error in errors)
 
@@ -105,13 +107,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing postgres_host raises ValidationError."""
-        # Arrange: Set other required vars but not POSTGRES_HOST
+        # Arrange
         monkeypatch.delenv("POSTGRES_HOST", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("postgres_host",) for error in errors)
 
@@ -122,13 +125,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing postgres_port raises ValidationError."""
-        # Arrange: Set other required vars but not POSTGRES_PORT
+        # Arrange
         monkeypatch.delenv("POSTGRES_PORT", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("postgres_port",) for error in errors)
 
@@ -139,13 +143,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing postgres_db raises ValidationError."""
-        # Arrange: Set other required vars but not POSTGRES_DB
+        # Arrange
         monkeypatch.delenv("POSTGRES_DB", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("postgres_db",) for error in errors)
 
@@ -156,13 +161,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing redis_host raises ValidationError."""
-        # Arrange: Set other required vars but not REDIS_HOST
+        # Arrange
         monkeypatch.delenv("REDIS_HOST", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("redis_host",) for error in errors)
 
@@ -173,13 +179,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing redis_port raises ValidationError."""
-        # Arrange: Set other required vars but not REDIS_PORT
+        # Arrange
         monkeypatch.delenv("REDIS_PORT", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("redis_port",) for error in errors)
 
@@ -190,13 +197,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing redis_db raises ValidationError."""
-        # Arrange: Set other required vars but not REDIS_DB
+        # Arrange
         monkeypatch.delenv("REDIS_DB", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("redis_db",) for error in errors)
 
@@ -207,13 +215,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing jwt_secret_key raises ValidationError."""
-        # Arrange: Set other required vars but not JWT_SECRET_KEY
+        # Arrange
         monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("jwt_secret_key",) for error in errors)
 
@@ -235,11 +244,14 @@ class TestSettingsValidation:
         weak_secret: str,
     ) -> None:
         """Test that weak JWT secrets are rejected by strength validator."""
+        # Arrange
         monkeypatch.setenv("JWT_SECRET_KEY", weak_secret)
 
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(
             "JWT secret key must be at least 32 characters" in error.get("msg", "")
@@ -253,13 +265,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing openai_api_key raises ValidationError."""
-        # Arrange: Set other required vars but not OPENAI_API_KEY
+        # Arrange
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("openai_api_key",) for error in errors)
 
@@ -270,13 +283,14 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that missing jwt_access_token_expire_minutes raises ValidationError."""
-        # Arrange: Set other required vars but not JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        # Arrange
         monkeypatch.delenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", raising=False)
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("jwt_access_token_expire_minutes",) for error in errors)
 
@@ -286,22 +300,19 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that validate_settings raises MissingRequiredSettingsError with helpful message."""
-        # Reload the config module to get a fresh validate_settings function
+        # Arrange
         if "app.core.config" in sys.modules:
             importlib.reload(sys.modules["app.core.config"])
 
-        # Need to import after the reload (inline, not at the top of the file)
         from app.core import config
 
-        # Prevent Settings from reading .env file by patching model_config
         original_model_config = config.Settings.model_config
         config.Settings.model_config = {
             **original_model_config,
-            "env_file": None,  # Disable .env file loading
+            "env_file": None,
         }
 
         try:
-            # Remove required env vars to trigger the error
             monkeypatch.delenv("POSTGRES_USER", raising=False)
             monkeypatch.delenv("POSTGRES_PASSWORD", raising=False)
             monkeypatch.delenv("POSTGRES_HOST", raising=False)
@@ -314,11 +325,11 @@ class TestSettingsValidation:
             monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
             monkeypatch.delenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", raising=False)
 
-            # Act & Assert: Test the real validate_settings function
+            # Act
             with pytest.raises(config.MissingRequiredSettingsError) as exc_info:
                 config.validate_settings()
 
-            # Verify the exception contains missing fields
+            # Assert
             missing_fields = exc_info.value.missing_fields
             assert len(missing_fields) > 0
             missing_fields_upper = {field.upper() for field in missing_fields}
@@ -345,7 +356,7 @@ class TestSettingsValidation:
         # Act
         settings = test_settings_class()
 
-        # Assert: Optional fields have defaults
+        # Assert
         assert settings.app_name == "ai-newsletter-api"
         assert settings.environment == "local"
         assert settings.log_level == "INFO"
@@ -358,15 +369,15 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that invalid PostgresDsn format is rejected."""
-        # Arrange: Set invalid database URL
+        # Arrange
         monkeypatch.setenv("DATABASE_URL", "not-a-valid-url")
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
-        # Should have validation error for database_url override
         assert any(error["loc"] == ("database_url",) for error in errors)
 
     def test_settings_environment_variable_override(
@@ -376,7 +387,7 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that environment variables override defaults."""
-        # Arrange: Set optional overrides
+        # Arrange
         monkeypatch.setenv("APP_NAME", "custom-app-name")
         monkeypatch.setenv("ENVIRONMENT", "production")
         monkeypatch.setenv("LOG_LEVEL", "DEBUG")
@@ -385,7 +396,7 @@ class TestSettingsValidation:
         # Act
         settings = test_settings_class()
 
-        # Assert: Environment variables override defaults
+        # Assert
         assert settings.app_name == "custom-app-name"
         assert settings.environment == "production"
         assert settings.log_level == "DEBUG"
@@ -398,12 +409,13 @@ class TestSettingsValidation:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that jwt_access_token_expire_minutes must be a valid integer."""
-        # Arrange: Set invalid integer value
+        # Arrange
         monkeypatch.setenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "not-an-integer")
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValidationError) as exc_info:
             test_settings_class()
 
+        # Assert
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("jwt_access_token_expire_minutes",) for error in errors)

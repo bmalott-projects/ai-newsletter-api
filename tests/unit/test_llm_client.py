@@ -132,9 +132,11 @@ async def test_extract_interests_empty_response(
     mock_response = _create_chat_completion("")
     mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-    # Act & Assert - client logs error and raises LLMServiceError
+    # Act
     with pytest.raises(LLMInvalidResponseError, match="Empty response from OpenAI") as exc_info:
         await llm_client.extract_interests("test prompt")
+
+    # Assert
     assert exc_info.value.error_code == "llm_response_invalid"
 
 
@@ -147,9 +149,11 @@ async def test_extract_interests_invalid_json(
     mock_response = _create_chat_completion("not valid json")
     mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-    # Act & Assert - client logs error and raises LLMServiceError
+    # Act
     with pytest.raises(LLMInvalidResponseError) as exc_info:
         await llm_client.extract_interests("test prompt")
+
+    # Assert
     assert exc_info.value.error_code == "llm_response_invalid"
 
 
@@ -159,13 +163,15 @@ async def test_extract_interests_validation_error(
 ) -> None:
     """Test handling of Pydantic validation error."""
     # Arrange
-    response_data = {"add_interests": "not a list"}  # Invalid: should be list
+    response_data = {"add_interests": "not a list"}
     mock_response = _create_chat_completion(json.dumps(response_data))
     mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-    # Act & Assert - client logs error and raises LLMServiceError
+    # Act
     with pytest.raises(LLMInvalidResponseError) as exc_info:
         await llm_client.extract_interests("test prompt")
+
+    # Assert
     assert exc_info.value.error_code == "llm_response_invalid"
 
 
@@ -179,9 +185,11 @@ async def test_extract_interests_api_connection_error(
         side_effect=APIConnectionError(request=Request("GET", "https://example.com"))
     )
 
-    # Act & Assert - client logs error and raises LLMServiceError
+    # Act
     with pytest.raises(LLMUnavailableError) as exc_info:
         await llm_client.extract_interests("test prompt")
+
+    # Assert
     assert exc_info.value.error_code == "llm_unavailable"
 
 
@@ -195,9 +203,11 @@ async def test_extract_interests_api_timeout_error(
         side_effect=APITimeoutError(request=Request("GET", "https://example.com"))
     )
 
-    # Act & Assert - client logs error and raises LLMServiceError
+    # Act
     with pytest.raises(LLMUnavailableError) as exc_info:
         await llm_client.extract_interests("test prompt")
+
+    # Assert
     assert exc_info.value.error_code == "llm_unavailable"
 
 
@@ -206,16 +216,17 @@ async def test_extract_interests_rate_limit_error(
     llm_client: OpenAIClient, mock_openai_client: AsyncMock
 ) -> None:
     """Test handling of rate limit error."""
-    # Arrange - RateLimitError requires response and body
-
+    # Arrange
     mock_response = MagicMock()
     mock_openai_client.chat.completions.create = AsyncMock(
         side_effect=RateLimitError(message="Rate limited", response=mock_response, body={})
     )
 
-    # Act & Assert - client logs error and raises LLMServiceError
+    # Act
     with pytest.raises(LLMUnavailableError) as exc_info:
         await llm_client.extract_interests("test prompt")
+
+    # Assert
     assert exc_info.value.error_code == "llm_unavailable"
 
 
@@ -224,15 +235,17 @@ async def test_extract_interests_authentication_error(
     llm_client: OpenAIClient, mock_openai_client: AsyncMock
 ) -> None:
     """Test handling of authentication error."""
-    # Arrange - AuthenticationError requires response and body
+    # Arrange
     mock_response = MagicMock()
     mock_openai_client.chat.completions.create = AsyncMock(
         side_effect=AuthenticationError(message="Auth failed", response=mock_response, body={})
     )
 
-    # Act & Assert - client logs error and raises LLMServiceError
+    # Act
     with pytest.raises(LLMAuthenticationError) as exc_info:
         await llm_client.extract_interests("test prompt")
+
+    # Assert
     assert exc_info.value.error_code == "llm_auth_failed"
 
 
@@ -241,12 +254,14 @@ async def test_extract_interests_unexpected_structure(
     llm_client: OpenAIClient, mock_openai_client: AsyncMock
 ) -> None:
     """Test handling of unexpected response structure."""
-    # Arrange - simulate missing choices[0]
+    # Arrange
     mock_response = MagicMock(spec=ChatCompletion)
     mock_response.choices = []
     mock_openai_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-    # Act & Assert - client logs error and raises LLMServiceError
+    # Act
     with pytest.raises(LLMInvalidResponseError) as exc_info:
         await llm_client.extract_interests("test prompt")
+
+    # Assert
     assert exc_info.value.error_code == "llm_response_invalid"

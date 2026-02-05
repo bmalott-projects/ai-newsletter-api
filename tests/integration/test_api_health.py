@@ -14,6 +14,7 @@ async def test_health(async_http_client: AsyncClient) -> None:
     """Test that the health endpoint returns ok status."""
     # Act
     response = await async_http_client.get("/api/meta/health")
+
     # Assert
     assert response.status_code == status.HTTP_200_OK
     parsed = HealthResponse.model_validate(response.json())

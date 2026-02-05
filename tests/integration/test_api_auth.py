@@ -88,12 +88,13 @@ class TestUserRegistration:
     @pytest.mark.asyncio
     async def test_register_password_too_short(self, async_http_client: AsyncClient) -> None:
         """Test that password validation enforces minimum length."""
-        # Arrange: Password too short
+        # Arrange
         user_data = {"email": "test@example.com", "password": "short"}  # Less than 8 characters
 
         # Act
         response = await async_http_client.post("/api/auth/register", json=user_data)
 
+        # Assert
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         payload = response.json()
         assert payload["error"] == "validation_error"
@@ -117,9 +118,11 @@ class TestUserLogin:
         login_payload = LoginUserRequest(
             email="login@example.com", password="password123"
         ).model_dump()
-        # Act: Login with correct credentials
+
+        # Act
         response = await async_http_client.post("/api/auth/login", json=login_payload)
 
+        # Assert
         assert response.status_code == status.HTTP_200_OK
         parsed = LoginResponse.model_validate(response.json())
         assert parsed.token_type == "bearer"
@@ -134,7 +137,7 @@ class TestUserLogin:
         ).model_dump()
         await async_http_client.post("/api/auth/register", json=register_payload)
 
-        # Act: Try to login with wrong password
+        # Act
         login_payload = LoginUserRequest(
             email="wrongpass@example.com", password="wrongpassword"
         ).model_dump()
@@ -149,10 +152,11 @@ class TestUserLogin:
     @pytest.mark.asyncio
     async def test_login_nonexistent_user(self, async_http_client: AsyncClient) -> None:
         """Test that login with non-existent user returns 401."""
-        # Act: Try to login with user that doesn't exist
+        # Arrange
         login_payload = LoginUserRequest(
             email="nonexistent@example.com", password="password123"
         ).model_dump()
+
         # Act
         response = await async_http_client.post("/api/auth/login", json=login_payload)
 
@@ -166,9 +170,10 @@ class TestProtectedEndpoints:
     @pytest.mark.asyncio
     async def test_get_me_without_token(self, async_http_client: AsyncClient) -> None:
         """Test that accessing protected endpoint without token returns 401."""
-        # Act: Try to access /me without authentication
+        # Act
         response = await async_http_client.get("/api/auth/me")
 
+        # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.asyncio
@@ -183,11 +188,12 @@ class TestProtectedEndpoints:
         login_response = await async_http_client.post("/api/auth/login", json=login_payload)
         token = LoginResponse.model_validate(login_response.json()).access_token
 
-        # Act: Access protected endpoint with token
+        # Act
         response = await async_http_client.get(
             "/api/auth/me", headers={"Authorization": f"Bearer {token}"}
         )
 
+        # Assert
         assert response.status_code == status.HTTP_200_OK
         parsed = UserResponse.model_validate(response.json())
         assert parsed.email == "me@example.com"
@@ -209,7 +215,7 @@ class TestProtectedEndpoints:
         self, async_http_client: AsyncClient, db_session: AsyncSession
     ) -> None:
         """Test that user can delete their own account."""
-        # Arrange: Register and login
+        # Arrange
         user_data = RegisterUserRequest(
             email="delete@example.com", password="password123"
         ).model_dump()

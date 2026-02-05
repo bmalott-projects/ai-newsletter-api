@@ -10,6 +10,7 @@ from app.core.lifespan import lifespan, verify_database_connection
 @pytest.mark.asyncio
 async def test_verify_database_connection_success() -> None:
     """Test that database connection verification succeeds when DB is available."""
+    # Arrange
     with patch("app.core.lifespan.get_engine") as mock_get_engine:
         mock_engine = MagicMock()
         mock_conn = AsyncMock()
@@ -20,8 +21,10 @@ async def test_verify_database_connection_success() -> None:
         mock_engine.connect = MagicMock(return_value=mock_conn)
         mock_get_engine.return_value = mock_engine
 
+        # Act
         await verify_database_connection()
 
+        # Assert
         mock_engine.connect.assert_called_once()
         mock_execute.assert_called_once()
 
@@ -29,10 +32,13 @@ async def test_verify_database_connection_success() -> None:
 @pytest.mark.asyncio
 async def test_verify_database_connection_failure() -> None:
     """Test that database connection verification raises on failure."""
+    # Arrange
     with patch("app.core.lifespan.get_engine") as mock_get_engine:
         mock_engine = MagicMock()
         mock_engine.connect = MagicMock(side_effect=Exception("Connection failed"))
         mock_get_engine.return_value = mock_engine
+
+        # Act & Assert
         with pytest.raises(RuntimeError, match="Failed to connect to database"):
             await verify_database_connection()
 
@@ -40,13 +46,16 @@ async def test_verify_database_connection_failure() -> None:
 @pytest.mark.asyncio
 async def test_lifespan_skips_db_check_in_test_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that lifespan skips database verification in test environment."""
+    # Arrange
     monkeypatch.setattr(lifespan_module.settings, "environment", "test")
     with patch("app.core.lifespan.verify_database_connection") as mock_verify:
         app = FastAPI()
 
+        # Act
         async with lifespan(app):
             pass
 
+        # Assert
         mock_verify.assert_not_called()
 
 
@@ -55,20 +64,24 @@ async def test_lifespan_verifies_db_in_non_test_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that lifespan verifies database in non-test environments."""
+    # Arrange
     monkeypatch.setattr(lifespan_module.settings, "environment", "local")
     with patch("app.core.lifespan.verify_database_connection") as mock_verify:
         mock_verify.return_value = None
         app = FastAPI()
 
+        # Act
         async with lifespan(app):
             pass
 
+        # Assert
         mock_verify.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_lifespan_disposes_engine_on_shutdown(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that lifespan disposes engine on shutdown."""
+    # Arrange
     monkeypatch.setattr(lifespan_module.settings, "environment", "test")
     with patch("app.core.lifespan.get_engine") as mock_get_engine:
         mock_engine = AsyncMock()
@@ -76,9 +89,11 @@ async def test_lifespan_disposes_engine_on_shutdown(monkeypatch: pytest.MonkeyPa
         mock_get_engine.return_value = mock_engine
         app = FastAPI()
 
+        # Act
         async with lifespan(app):
             pass
 
+        # Assert
         mock_engine.dispose.assert_called_once()
 
 
@@ -87,6 +102,7 @@ async def test_lifespan_disposes_engine_even_if_startup_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that engine is disposed even if startup verification fails."""
+    # Arrange
     monkeypatch.setattr(lifespan_module.settings, "environment", "local")
     with patch("app.core.lifespan.get_engine") as mock_get_engine:
         mock_engine = AsyncMock()
@@ -98,9 +114,10 @@ async def test_lifespan_disposes_engine_even_if_startup_fails(
         ):
             app = FastAPI()
 
+            # Act
             with pytest.raises(RuntimeError):
                 async with lifespan(app):
                     pass
 
-            # Engine should still be disposed even if startup fails
+            # Assert
             mock_engine.dispose.assert_called_once()
