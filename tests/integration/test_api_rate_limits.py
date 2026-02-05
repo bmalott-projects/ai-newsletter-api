@@ -9,6 +9,7 @@ from httpx import AsyncClient
 from app.api.interests_api import get_llm_client
 from app.api.schemas import (
     InterestExtractionRequest,
+    InterestExtractionResponse,
     LoginResponse,
     LoginUserRequest,
     RegisterUserRequest,
@@ -81,7 +82,7 @@ class TestRateLimits:
             )
             statuses.append(response.status_code)
             if response.status_code == status.HTTP_200_OK:
-                InterestExtractionResult.model_validate(response.json())
+                InterestExtractionResponse.model_validate(response.json())
         # Assert
         assert statuses[:5] == [status.HTTP_200_OK] * 5
         assert statuses[5] == status.HTTP_429_TOO_MANY_REQUESTS
@@ -107,6 +108,6 @@ class TestRateLimits:
         )
         # Assert
         assert second_response.status_code == status.HTTP_200_OK
-        InterestExtractionResult.model_validate(second_response.json())
+        InterestExtractionResponse.model_validate(second_response.json())
 
         async_app.dependency_overrides.pop(get_llm_client, None)

@@ -12,6 +12,7 @@ from httpx import AsyncClient
 from app.api.interests_api import get_llm_client
 from app.api.schemas import (
     InterestExtractionRequest,
+    InterestExtractionResponse,
     LoginResponse,
     LoginUserRequest,
     RegisterUserRequest,
@@ -92,7 +93,7 @@ async def test_extract_interests_success(
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    parsed = InterestExtractionResult.model_validate(response.json())
+    parsed = InterestExtractionResponse.model_validate(response.json())
     assert parsed.add_interests == ["Python", "FastAPI"]
     assert parsed.remove_interests == ["JavaScript"]
 
@@ -389,7 +390,7 @@ async def test_extract_interests_sanitizes_prompt_content(
     )
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    InterestExtractionResult.model_validate(response.json())
+    InterestExtractionResponse.model_validate(response.json())
     assert capture_client.last_prompt == "Interested in Python FastAPI"
 
     async_app.dependency_overrides.pop(get_llm_client, None)

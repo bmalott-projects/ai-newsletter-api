@@ -13,12 +13,14 @@ from app.api.schemas.auth_response_models import (
     UserResponse,
 )
 from app.api.schemas.interests_request_models import InterestExtractionRequest
+from app.api.schemas.interests_response_models import InterestExtractionResponse
 from app.api.schemas.meta_response_models import HealthResponse
 
 __all__ = [
     "DeleteUserResponse",
     "HealthResponse",
     "InterestExtractionRequest",
+    "InterestExtractionResponse",
     "LoginResponse",
     "LoginUserRequest",
     "RegisterUserRequest",
