@@ -11,9 +11,9 @@ from httpx import AsyncClient
 
 from app.api.interests_api import get_llm_client
 from app.api.schemas import (
+    AccessTokenResponse,
     InterestExtractionRequest,
     InterestExtractionResponse,
-    LoginResponse,
     LoginUserRequest,
     RegisterUserRequest,
 )
@@ -67,12 +67,14 @@ async def test_extract_interests_success(
     """Test successful interest extraction via API."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="test@example.com", password="password123"
+        email="test@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(email="test@example.com", password="password123").model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     # Mock LLM client
@@ -128,14 +130,16 @@ async def test_extract_interests_validation_error(
     """Test validation errors for invalid requests."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="validation@example.com", password="password123"
+        email="validation@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(
         email="validation@example.com", password="password123"
     ).model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     mock_client = MockLLMClient()
@@ -160,14 +164,16 @@ async def test_extract_interests_llm_service_error(
     """Test LLM errors are mapped to 503 with standard error payload."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="llm-error@example.com", password="password123"
+        email="llm-error@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(
         email="llm-error@example.com", password="password123"
     ).model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     error = LLMUnavailableError("LLM service unavailable")
@@ -194,14 +200,16 @@ async def test_extract_interests_llm_authentication_error(
     """Test LLM auth errors are mapped to 502 with standard error payload."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="llm-auth@example.com", password="password123"
+        email="llm-auth@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(
         email="llm-auth@example.com", password="password123"
     ).model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     error = LLMAuthenticationError("LLM authentication failed")
@@ -227,14 +235,16 @@ async def test_extract_interests_llm_invalid_response_error(
     """Test LLM invalid response errors are mapped to 502 with standard error payload."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="llm-invalid@example.com", password="password123"
+        email="llm-invalid@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(
         email="llm-invalid@example.com", password="password123"
     ).model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     error = LLMInvalidResponseError("LLM returned invalid JSON.")
@@ -260,14 +270,16 @@ async def test_extract_interests_rejects_prompt_with_url(
     """Reject prompts that include URLs."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="url-block@example.com", password="password123"
+        email="url-block@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(
         email="url-block@example.com", password="password123"
     ).model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     mock_client = MockLLMClient()
@@ -296,14 +308,16 @@ async def test_extract_interests_rejects_prompt_injection_patterns(
     """Reject prompts with prompt-injection patterns."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="injection@example.com", password="password123"
+        email="injection@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(
         email="injection@example.com", password="password123"
     ).model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     mock_client = MockLLMClient()
@@ -332,14 +346,16 @@ async def test_extract_interests_rejects_obfuscated_injection_pattern(
     """Reject obfuscated prompt-injection patterns after sanitization."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="obfuscated@example.com", password="password123"
+        email="obfuscated@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(
         email="obfuscated@example.com", password="password123"
     ).model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     mock_client = MockLLMClient()
@@ -368,14 +384,16 @@ async def test_extract_interests_sanitizes_prompt_content(
     """Sanitize prompts by stripping code and normalizing whitespace."""
     # Arrange
     register_payload = RegisterUserRequest(
-        email="sanitize@example.com", password="password123"
+        email="sanitize@example.com",
+        password="password123",
+        confirm_password="password123",
     ).model_dump()
     await async_http_client.post("/api/auth/register", json=register_payload)
     login_payload = LoginUserRequest(
         email="sanitize@example.com", password="password123"
     ).model_dump()
     login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-    token = LoginResponse.model_validate(login_response.json()).access_token
+    token = AccessTokenResponse.model_validate(login_response.json()).access_token
     headers = {"Authorization": f"Bearer {token}"}
 
     capture_client = CaptureLLMClient()

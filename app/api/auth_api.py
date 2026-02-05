@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas.auth_request_models import LoginUserRequest, RegisterUserRequest
 from app.api.schemas.auth_response_models import (
+    AccessTokenResponse,
     DeleteUserResponse,
-    LoginResponse,
     UserResponse,
 )
 from app.core.auth import create_access_token, get_current_user
@@ -70,7 +70,7 @@ async def register(
 
 @router.post(
     "/login",
-    response_model=LoginResponse,
+    response_model=AccessTokenResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse},
@@ -82,7 +82,7 @@ async def login(
     request: Request,
     credentials: LoginUserRequest,
     db: AsyncSession = Depends(get_db),
-) -> LoginResponse:
+) -> AccessTokenResponse:
     """Authenticate user and return JWT token."""
     try:
         user = await authenticate_user(credentials.email, credentials.password, db)
@@ -105,7 +105,7 @@ async def login(
 
     access_token = create_access_token(data={"sub": str(user.id)})
 
-    return LoginResponse(access_token=access_token)
+    return AccessTokenResponse(access_token=access_token)
 
 
 @router.get(

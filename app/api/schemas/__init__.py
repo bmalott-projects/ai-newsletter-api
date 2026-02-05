@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from app.api.schemas.auth_request_models import LoginUserRequest, RegisterUserRequest
 from app.api.schemas.auth_response_models import (
+    AccessTokenResponse,
     DeleteUserResponse,
-    LoginResponse,
     UserResponse,
 )
 from app.api.schemas.interests_request_models import InterestExtractionRequest
@@ -17,11 +17,11 @@ from app.api.schemas.interests_response_models import InterestExtractionResponse
 from app.api.schemas.meta_response_models import HealthResponse
 
 __all__ = [
+    "AccessTokenResponse",
     "DeleteUserResponse",
     "HealthResponse",
     "InterestExtractionRequest",
     "InterestExtractionResponse",
-    "LoginResponse",
     "LoginUserRequest",
     "RegisterUserRequest",
     "UserResponse",

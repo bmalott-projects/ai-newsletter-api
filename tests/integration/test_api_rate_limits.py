@@ -8,9 +8,9 @@ from httpx import AsyncClient
 
 from app.api.interests_api import get_llm_client
 from app.api.schemas import (
+    AccessTokenResponse,
     InterestExtractionRequest,
     InterestExtractionResponse,
-    LoginResponse,
     LoginUserRequest,
     RegisterUserRequest,
     UserResponse,
@@ -36,7 +36,9 @@ class TestRateLimits:
         statuses: list[int] = []
         for i in range(6):
             payload = RegisterUserRequest(
-                email=f"rate-limit-{i}@example.com", password="password123"
+                email=f"rate-limit-{i}@example.com",
+                password="password123",
+                confirm_password="password123",
             ).model_dump()
             # Act
             response = await async_http_client.post(
@@ -57,14 +59,16 @@ class TestRateLimits:
         """Test that extraction is rate-limited by token across IPs."""
         # Arrange
         register_payload = RegisterUserRequest(
-            email="limit-user@example.com", password="password123"
+            email="limit-user@example.com",
+            password="password123",
+            confirm_password="password123",
         ).model_dump()
         await async_http_client.post("/api/auth/register", json=register_payload)
         login_payload = LoginUserRequest(
             email="limit-user@example.com", password="password123"
         ).model_dump()
         login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-        token = LoginResponse.model_validate(login_response.json()).access_token
+        token = AccessTokenResponse.model_validate(login_response.json()).access_token
 
         async_app.dependency_overrides[get_llm_client] = lambda: MockLLMClient()
 
@@ -88,14 +92,16 @@ class TestRateLimits:
         assert statuses[5] == status.HTTP_429_TOO_MANY_REQUESTS
 
         second_register = RegisterUserRequest(
-            email="limit-user-2@example.com", password="password123"
+            email="limit-user-2@example.com",
+            password="password123",
+            confirm_password="password123",
         ).model_dump()
         await async_http_client.post("/api/auth/register", json=second_register)
         second_login_payload = LoginUserRequest(
             email="limit-user-2@example.com", password="password123"
         ).model_dump()
         second_login = await async_http_client.post("/api/auth/login", json=second_login_payload)
-        second_token = LoginResponse.model_validate(second_login.json()).access_token
+        second_token = AccessTokenResponse.model_validate(second_login.json()).access_token
 
         # Act
         second_response = await async_http_client.post(

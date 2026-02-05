@@ -14,8 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import (
+    AccessTokenResponse,
     DeleteUserResponse,
-    LoginResponse,
     LoginUserRequest,
     RegisterUserRequest,
     UserResponse,
@@ -33,7 +33,9 @@ class TestUserRegistration:
         """Test successful user registration."""
         # Arrange
         user_data = RegisterUserRequest(
-            email="test@example.com", password="password123"
+            email="test@example.com",
+            password="password123",
+            confirm_password="password123",
         ).model_dump()
 
         # Act
@@ -60,7 +62,9 @@ class TestUserRegistration:
         """Test that registering with an existing email returns 400."""
         # Arrange
         user_data = RegisterUserRequest(
-            email="duplicate@example.com", password="password123"
+            email="duplicate@example.com",
+            password="password123",
+            confirm_password="password123",
         ).model_dump()
         await async_http_client.post("/api/auth/register", json=user_data)
 
@@ -78,7 +82,9 @@ class TestUserRegistration:
         """Test that invalid email format is rejected."""
         # Arrange
         user_data = RegisterUserRequest.model_construct(
-            email="not-an-email", password="password123"
+            email="not-an-email",
+            password="password123",
+            confirm_password="password123",
         ).model_dump()
 
         # Act
@@ -92,7 +98,9 @@ class TestUserRegistration:
         """Test that password validation enforces minimum length."""
         # Arrange
         user_data = RegisterUserRequest.model_construct(
-            email="test@example.com", password="short"
+            email="test@example.com",
+            password="short",
+            confirm_password="short",
         ).model_dump()
 
         # Act
@@ -115,7 +123,9 @@ class TestUserLogin:
         """Test successful login returns JWT token."""
         # Arrange
         register_payload = RegisterUserRequest(
-            email="login@example.com", password="password123"
+            email="login@example.com",
+            password="password123",
+            confirm_password="password123",
         ).model_dump()
         await async_http_client.post("/api/auth/register", json=register_payload)
 
@@ -128,7 +138,7 @@ class TestUserLogin:
 
         # Assert
         assert response.status_code == status.HTTP_200_OK
-        parsed = LoginResponse.model_validate(response.json())
+        parsed = AccessTokenResponse.model_validate(response.json())
         assert parsed.token_type == "bearer"
         assert len(parsed.access_token) > 0
 
@@ -137,7 +147,9 @@ class TestUserLogin:
         """Test that wrong password returns 401."""
         # Arrange
         register_payload = RegisterUserRequest(
-            email="wrongpass@example.com", password="password123"
+            email="wrongpass@example.com",
+            password="password123",
+            confirm_password="password123",
         ).model_dump()
         await async_http_client.post("/api/auth/register", json=register_payload)
 
@@ -184,13 +196,17 @@ class TestProtectedEndpoints:
     async def test_get_me_with_valid_token(self, async_http_client: AsyncClient) -> None:
         """Test that accessing /me with valid token returns user info."""
         # Arrange
-        user_data = RegisterUserRequest(email="me@example.com", password="password123").model_dump()
+        user_data = RegisterUserRequest(
+            email="me@example.com",
+            password="password123",
+            confirm_password="password123",
+        ).model_dump()
         await async_http_client.post("/api/auth/register", json=user_data)
         login_payload = LoginUserRequest(
             email="me@example.com", password="password123"
         ).model_dump()
         login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-        token = LoginResponse.model_validate(login_response.json()).access_token
+        token = AccessTokenResponse.model_validate(login_response.json()).access_token
 
         # Act
         response = await async_http_client.get(
@@ -221,14 +237,16 @@ class TestProtectedEndpoints:
         """Test that user can delete their own account."""
         # Arrange
         user_data = RegisterUserRequest(
-            email="delete@example.com", password="password123"
+            email="delete@example.com",
+            password="password123",
+            confirm_password="password123",
         ).model_dump()
         await async_http_client.post("/api/auth/register", json=user_data)
         login_payload = LoginUserRequest(
             email="delete@example.com", password="password123"
         ).model_dump()
         login_response = await async_http_client.post("/api/auth/login", json=login_payload)
-        token = LoginResponse.model_validate(login_response.json()).access_token
+        token = AccessTokenResponse.model_validate(login_response.json()).access_token
 
         # Act
         response = await async_http_client.delete(

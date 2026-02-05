@@ -2,11 +2,51 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
-class _UserAuthRequestBase(BaseModel):
-    """Shared base for user authentication request models."""
+def _validate_password_length(password: str) -> str:
+    """Validate that password does not exceed 72 bytes when UTF-8 encoded.
+
+    We use a 50 character limit to stay under the 72-byte bcrypt limit
+    with multi-byte UTF-8 characters.
+    """
+    if len(password.encode("utf-8")) > 72:
+        raise ValueError("Password must not exceed 50 characters")
+    return password
+
+
+class RegisterUserRequest(BaseModel):
+    """Request model for user registration."""
+
+    email: EmailStr = Field(..., max_length=320, description="Valid email address")
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=50,
+        description="Password between 8 and 50 characters",
+    )
+    confirm_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=50,
+        description="Password confirmation (must match password)",
+    )
+
+    @field_validator("password", "confirm_password")
+    @classmethod
+    def validate_password_length(cls, v: str) -> str:
+        return _validate_password_length(v)
+
+    @model_validator(mode="after")
+    def passwords_match(self) -> RegisterUserRequest:
+        if self.password != self.confirm_password:
+            raise ValueError("Password and confirm password do not match")
+        return self
+
+
+class LoginUserRequest(BaseModel):
+    """Request model for user login."""
 
     email: EmailStr = Field(..., max_length=320, description="Valid email address")
     password: str = Field(
@@ -19,19 +59,4 @@ class _UserAuthRequestBase(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password_length(cls, v: str) -> str:
-        """Validate that password does not exceed 72 bytes when UTF-8 encoded.
-
-        Note: We use a 50 character limit to ensure we stay under the 72-byte
-        bcrypt limit even with multi-byte UTF-8 characters.
-        """
-        if len(v.encode("utf-8")) > 72:
-            raise ValueError("Password must not exceed 50 characters")
-        return v
-
-
-class RegisterUserRequest(_UserAuthRequestBase):
-    """Request model for user registration."""
-
-
-class LoginUserRequest(_UserAuthRequestBase):
-    """Request model for user login."""
+        return _validate_password_length(v)

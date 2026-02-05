@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 
-class LoginResponse(BaseModel):
+class AccessTokenResponse(BaseModel):
     """Response model for authentication token."""
 
     access_token: str
