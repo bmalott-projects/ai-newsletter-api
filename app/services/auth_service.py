@@ -41,100 +41,105 @@ class PasswordTooLongError(AuthenticationError):
         super().__init__(message, "password_too_long")
 
 
-async def register_user(email: str, password: str, db: AsyncSession) -> User:
-    """Register a new user.
+class AuthService:
+    """Service for user registration, authentication, and deletion."""
 
-    Args:
-        email: User's email address
-        password: Plain text password (will be hashed)
-        db: Database session
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
 
-    Returns:
-        The newly created User object
+    async def register_user(self, email: str, password: str) -> User:
+        """Register a new user.
 
-    Raises:
-        UserAlreadyExistsError: If email is already registered
-        PasswordTooLongError: If password exceeds 72 bytes when UTF-8 encoded
-    """
-    # Check if user already exists
-    result = await db.execute(select(User).where(User.email == email))
-    existing_user = result.scalar_one_or_none()
+        Args:
+            email: User's email address
+            password: Plain text password (will be hashed)
 
-    if existing_user:
-        raise UserAlreadyExistsError("Email already registered")
+        Returns:
+            The newly created User object
 
-    # Create new user
-    try:
-        hashed_password = get_password_hash(password)
-    except ValueError as e:
-        raise PasswordTooLongError("Password must not exceed 72 bytes when UTF-8 encoded") from e
+        Raises:
+            UserAlreadyExistsError: If email is already registered
+            PasswordTooLongError: If password exceeds 72 bytes when UTF-8 encoded
+        """
+        result = await self._session.execute(select(User).where(User.email == email))
+        existing_user = result.scalar_one_or_none()
 
-    try:
-        result = await db.execute(
-            insert(User).values(email=email, hashed_password=hashed_password).returning(User)
-        )
-        new_user = result.scalar_one()
-    except IntegrityError as e:
-        # Check if it's a unique constraint violation on email
-        # asyncpg raises UniqueViolationError (error code 23505) for unique constraint violations
-        error_str = str(e.orig).lower()
-        if (
-            "unique" in error_str
-            or "duplicate" in error_str
-            or "23505" in str(e.orig)  # PostgreSQL unique violation error code
-            or "ix_users_email" in error_str  # Constraint name
-        ):
-            raise UserAlreadyExistsError("Email already registered") from e
-        # Re-raise if it's a different integrity error
-        raise
+        if existing_user:
+            raise UserAlreadyExistsError("Email already registered")
 
-    return new_user
+        try:
+            hashed_password = get_password_hash(password)
+        except ValueError as e:
+            raise PasswordTooLongError(
+                "Password must not exceed 72 bytes when UTF-8 encoded"
+            ) from e
 
+        try:
+            result = await self._session.execute(
+                insert(User).values(email=email, hashed_password=hashed_password).returning(User)
+            )
+            new_user = result.scalar_one()
+        except IntegrityError as e:
+            error_str = str(e.orig).lower()
+            if (
+                "unique" in error_str
+                or "duplicate" in error_str
+                or "23505" in str(e.orig)
+                or "ix_users_email" in error_str
+            ):
+                raise UserAlreadyExistsError("Email already registered") from e
+            raise
 
-async def authenticate_user(email: str, password: str, db: AsyncSession) -> User:
-    """Authenticate a user with email and password.
+        return new_user
 
-    Args:
-        email: User's email address
-        password: Plain text password
-        db: Database session
+    async def authenticate_user(self, email: str, password: str) -> User:
+        """Authenticate a user with email and password.
 
-    Returns:
-        The authenticated User object
+        Args:
+            email: User's email address
+            password: Plain text password
 
-    Raises:
-        InvalidCredentialsError: If email or password is incorrect
-        PasswordTooLongError: If password exceeds 72 bytes when UTF-8 encoded
-    """
-    result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+        Returns:
+            The authenticated User object
 
-    if user is None:
-        raise InvalidCredentialsError("Incorrect email or password")
+        Raises:
+            InvalidCredentialsError: If email or password is incorrect
+            PasswordTooLongError: If password exceeds 72 bytes when UTF-8 encoded
+        """
+        result = await self._session.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
 
-    try:
-        password_valid = verify_password(password, user.hashed_password)
-    except ValueError as e:
-        raise PasswordTooLongError("Password must not exceed 72 bytes when UTF-8 encoded") from e
+        if user is None:
+            raise InvalidCredentialsError("Incorrect email or password")
 
-    if not password_valid:
-        raise InvalidCredentialsError("Incorrect email or password")
+        try:
+            password_valid = verify_password(password, user.hashed_password)
+        except ValueError as e:
+            raise PasswordTooLongError(
+                "Password must not exceed 72 bytes when UTF-8 encoded"
+            ) from e
 
-    return user
+        if not password_valid:
+            raise InvalidCredentialsError("Incorrect email or password")
 
+        return user
 
-async def delete_user(user_id: int, db: AsyncSession) -> int:
-    """Delete a user and all associated data.
+    async def delete_user(self, user_id: int) -> int:
+        """Delete a user and all associated data.
 
-    Args:
-        user_id: ID of the user to delete
-        db: Database session
+        Args:
+            user_id: ID of the user to delete
 
-    Returns:
-        The ID of the deleted user
+        Returns:
+            The ID of the deleted user
 
-    Note:
-        This performs a hard delete. Associated data is removed via CASCADE.
-    """
-    await db.execute(delete(User).where(User.id == user_id))
-    return user_id
+        Note:
+            This performs a hard delete. Associated data is removed via CASCADE.
+        """
+        await self._session.execute(delete(User).where(User.id == user_id))
+        return user_id
+
+    async def get_user_by_id(self, user_id: int) -> User | None:
+        """Return the user with the given ID, or None if not found."""
+        result = await self._session.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()

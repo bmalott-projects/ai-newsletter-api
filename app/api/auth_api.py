@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import UnitOfWork, get_current_user, get_uow
 from app.api.schemas.auth_request_models import LoginUserRequest, RegisterUserRequest
 from app.api.schemas.auth_response_models import (
     AccessTokenResponse,
     DeleteUserResponse,
     UserResponse,
 )
-from app.core.auth import create_access_token, get_current_user
+from app.core.auth import create_access_token
 from app.core.errors import ErrorResponse, build_http_error
 from app.core.rate_limit import (
     AUTH_DELETE_RATE_LIMIT,
@@ -20,15 +20,11 @@ from app.core.rate_limit import (
     rate_limit_user_or_ip_key,
 )
 from app.db.models.user import User
-from app.db.session import get_db, get_db_transaction
 from app.services.auth_service import (
     AuthenticationError,
     InvalidCredentialsError,
     PasswordTooLongError,
     UserAlreadyExistsError,
-    authenticate_user,
-    delete_user,
-    register_user,
 )
 
 router = APIRouter()
@@ -48,11 +44,11 @@ router = APIRouter()
 async def register(
     request: Request,
     user_data: RegisterUserRequest,
-    db: AsyncSession = Depends(get_db_transaction),
+    uow: UnitOfWork = Depends(get_uow),
 ) -> UserResponse:
     """Register a new user."""
     try:
-        new_user = await register_user(user_data.email, user_data.password, db)
+        new_user = await uow.auth_service.register_user(user_data.email, user_data.password)
         return UserResponse.model_validate(new_user)
     except AuthenticationError as e:
         if isinstance(e, UserAlreadyExistsError):
@@ -81,11 +77,11 @@ async def register(
 async def login(
     request: Request,
     credentials: LoginUserRequest,
-    db: AsyncSession = Depends(get_db),
+    uow: UnitOfWork = Depends(get_uow),
 ) -> AccessTokenResponse:
     """Authenticate user and return JWT token."""
     try:
-        user = await authenticate_user(credentials.email, credentials.password, db)
+        user = await uow.auth_service.authenticate_user(credentials.email, credentials.password)
     except AuthenticationError as e:
         if isinstance(e, InvalidCredentialsError):
             status_code = status.HTTP_401_UNAUTHORIZED
@@ -136,8 +132,8 @@ async def get_me(
 async def delete_me(
     request: Request,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_transaction),
+    uow: UnitOfWork = Depends(get_uow),
 ) -> DeleteUserResponse:
     """Delete the current authenticated user and all associated data."""
-    deleted_id = await delete_user(current_user.id, db)
+    deleted_id = await uow.auth_service.delete_user(current_user.id)
     return DeleteUserResponse(deleted_user_id=deleted_id)

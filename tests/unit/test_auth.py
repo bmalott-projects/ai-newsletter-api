@@ -14,9 +14,9 @@ import pytest
 from fastapi import HTTPException, status
 from jose import jwt
 
+from app.api.dependencies import get_current_user
 from app.core.auth import (
     create_access_token,
-    get_current_user,
     get_password_hash,
     verify_password,
     verify_token,
@@ -256,35 +256,33 @@ class TestGetCurrentUser:
         # Arrange
         user_id = 123
         token = create_access_token(data={"sub": str(user_id)})
-
-        # Mock database session
         mock_user = User(id=user_id, email="test@example.com", hashed_password="hashed")
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = mock_user
-        mock_db = AsyncMock()
-        mock_db.execute = AsyncMock(return_value=mock_result)
+        mock_auth = MagicMock()
+        mock_auth.get_user_by_id = AsyncMock(return_value=mock_user)
+        mock_uow = MagicMock()
+        mock_uow.auth_service = mock_auth
 
         with patch("app.core.auth.oauth2_scheme") as mock_scheme:
             mock_scheme.return_value = token
 
             # Act
-            result = await get_current_user(token=token, db=mock_db)
+            result = await get_current_user(token=token, uow=mock_uow)
 
             # Assert
             assert result == mock_user
             assert result.id == user_id
-            mock_db.execute.assert_called_once()
+            mock_auth.get_user_by_id.assert_called_once_with(user_id)
 
     @pytest.mark.asyncio
     async def test_get_current_user_invalid_token(self) -> None:
         """Test that get_current_user raises HTTPException for invalid token."""
         # Arrange
         invalid_token = "invalid.token"
-        mock_db = AsyncMock()
+        mock_uow = MagicMock()
 
         # Act
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=invalid_token, db=mock_db)
+            await get_current_user(token=invalid_token, uow=mock_uow)
 
         # Assert
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
@@ -299,11 +297,11 @@ class TestGetCurrentUser:
         """Test that get_current_user raises HTTPException when token has no 'sub'."""
         # Arrange
         token = create_access_token(data={})
-        mock_db = AsyncMock()
+        mock_uow = MagicMock()
 
         # Act
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=token, db=mock_db)
+            await get_current_user(token=token, uow=mock_uow)
 
         # Assert
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
@@ -313,11 +311,11 @@ class TestGetCurrentUser:
         """Test that get_current_user raises HTTPException for invalid user ID."""
         # Arrange
         token = create_access_token(data={"sub": "not_a_number"})
-        mock_db = AsyncMock()
+        mock_uow = MagicMock()
 
         # Act
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=token, db=mock_db)
+            await get_current_user(token=token, uow=mock_uow)
 
         # Assert
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
@@ -328,14 +326,14 @@ class TestGetCurrentUser:
         # Arrange
         user_id = 999
         token = create_access_token(data={"sub": str(user_id)})
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_db = AsyncMock()
-        mock_db.execute = AsyncMock(return_value=mock_result)
+        mock_auth = MagicMock()
+        mock_auth.get_user_by_id = AsyncMock(return_value=None)
+        mock_uow = MagicMock()
+        mock_uow.auth_service = mock_auth
 
         # Act
         with pytest.raises(HTTPException) as exc_info:
-            await get_current_user(token=token, db=mock_db)
+            await get_current_user(token=token, uow=mock_uow)
 
         # Assert
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED

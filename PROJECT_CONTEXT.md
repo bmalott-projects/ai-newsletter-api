@@ -18,16 +18,54 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 
 ### Directory Structure
 
-- **`app/api/`**: FastAPI routers (HTTP layer). Thin: validation + JWT auth + calls services.
+- **`app/api/`**: FastAPI routers (HTTP layer) and request-scoped wiring. Thin routes: validation + JWT auth + calls services. `app/api/dependencies/` holds dependencies used by routes (e.g. Unit of Work, `get_current_user`).
 - **`app/services/`**: Domain-specific business logic (user operations, interest extraction, newsletter generation). Contains business rules and orchestrates multiple components (DB, LLM, etc.).
 - **`app/llm/`**: LLM client abstraction + prompts + output schemas (mockable for tests).
 - **`app/db/`**: SQLAlchemy models + async session management.
-- **`app/core/`**: Infrastructure and cross-cutting utilities (configuration, logging, lifespan, password hashing, JWT token creation). Low-level utilities with NO business rules.
+- **`app/core/`**: Infrastructure and cross-cutting utilities (configuration, logging, lifespan, password hashing, JWT token creation). Low-level utilities with NO business rules. Core does not depend on services or API.
 - **`alembic/`**: Database migrations (schema is migration-first).
 - **`tests/`**: Test suite organized by type:
   - **`tests/integration/`**: Integration tests (full HTTP + database flows)
   - **`tests/unit/`**: Unit tests (mocked dependencies, isolated functions)
   - **`tests/conftest.py`**: Shared fixtures
+
+### Layered architecture and dependency rules
+
+- **Unidirectional dependencies:** API may depend on core, services, and db. Services may depend on core (not API). Core does not depend on services or API. DB does not depend on app layers.
+- **Logic vs wiring:** Business logic and data access must flow API → services → DB (no bypassing the services layer for logic). The API may **depend on** multiple lower layers (e.g. db for session, services for UoW types) for **wiring** only (e.g. creating the session and UoW and injecting them); that does not bypass the services layer for logic.
+
+```mermaid
+flowchart TB
+    subgraph api [API Layer]
+        routes[Routes]
+        deps[Dependencies]
+        uow[UnitOfWork get_uow]
+    end
+    subgraph services [Services Layer]
+        auth_svc[AuthService]
+        interest_svc[InterestService]
+    end
+    subgraph core [Core Layer]
+        auth[auth utilities]
+        config[config]
+        errors[errors]
+        rate_limit[rate_limit]
+    end
+    subgraph db [DB Layer]
+        session[Session]
+        models[Models]
+    end
+    routes --> deps
+    routes --> uow
+    deps --> auth
+    deps --> uow
+    uow --> session
+    uow --> auth_svc
+    uow --> interest_svc
+    auth_svc --> auth
+    interest_svc --> core
+    session --> models
+```
 
 ### Tech Stack Choices & Rationale
 
@@ -59,7 +97,7 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 **Core Layer (`app/core/`)** - Infrastructure & Cross-Cutting Utilities:
 
 - **Purpose**: Low-level utilities used across the entire application
-- **Characteristics**: No business rules, domain-agnostic, infrastructure concerns
+- **Characteristics**: No business rules, domain-agnostic, infrastructure concerns. Core does not depend on services or API.
 - **Examples**: Password hashing (`get_password_hash()`), JWT token creation (`create_access_token()`), configuration, logging
 - **Think of it as**: Tools in a toolbox - reusable utilities
 

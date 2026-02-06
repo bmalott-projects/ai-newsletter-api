@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ExceptionHandler
 
@@ -23,6 +24,9 @@ from app.core.errors import (
 from app.core.lifespan import lifespan
 from app.core.logging import configure_logging
 from app.core.rate_limit import limiter
+from app.llm.client import OpenAIClient
+from app.services.auth_service import AuthService
+from app.services.interest_service import InterestService
 
 # Import settings - this may raise MissingRequiredSettingsError
 try:
@@ -76,6 +80,16 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_middleware(SlowAPIMiddleware)
     app.include_router(api_router, prefix="/api")
+    openai_client = OpenAIClient()
+
+    def _interest_service_factory(session: AsyncSession) -> InterestService:
+        return InterestService(session, openai_client)
+
+    app.state.services = {
+        "auth_service": AuthService,
+        "interest_service": _interest_service_factory,
+    }
+
     return app
 
 
