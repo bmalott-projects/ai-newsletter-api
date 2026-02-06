@@ -31,7 +31,7 @@ Flutter App → FastAPI Backend → LLM + Search APIs + PostgreSQL (with pgvecto
 
 ### Layered architecture and dependency rules
 
-- **Unidirectional dependencies:** API may depend on core, services, and db. Services may depend on core (not API). Core does not depend on services or API. DB does not depend on app layers.
+- **Unidirectional dependencies:** API may depend on core, services, and db. Services may depend on core (not API). Core does not depend on services or API. DB may depend on core for config (e.g. connection URL); DB does not depend on API or services.
 - **Logic vs wiring:** Business logic and data access must flow API → services → DB (no bypassing the services layer for logic). The API may **depend on** multiple lower layers (e.g. db for session, services for UoW types) for **wiring** only (e.g. creating the session and UoW and injecting them); that does not bypass the services layer for logic.
 
 ```mermaid
