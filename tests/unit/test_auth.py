@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException, status
@@ -262,16 +262,13 @@ class TestGetCurrentUser:
         mock_uow = MagicMock()
         mock_uow.auth_service = mock_auth
 
-        with patch("app.core.auth.oauth2_scheme") as mock_scheme:
-            mock_scheme.return_value = token
+        # Act
+        result = await get_current_user(token=token, uow=mock_uow)
 
-            # Act
-            result = await get_current_user(token=token, uow=mock_uow)
-
-            # Assert
-            assert result == mock_user
-            assert result.id == user_id
-            mock_auth.get_user_by_id.assert_called_once_with(user_id)
+        # Assert
+        assert result == mock_user
+        assert result.id == user_id
+        mock_auth.get_user_by_id.assert_called_once_with(user_id)
 
     @pytest.mark.asyncio
     async def test_get_current_user_invalid_token(self) -> None:
