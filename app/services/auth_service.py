@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_password_hash, verify_password
 from app.db.models.user import User
+
+
+def auth_service_factory_provider() -> Callable[[AsyncSession], AuthService]:
+    """Return a factory for session-scoped AuthService."""
+
+    def factory(session: AsyncSession) -> AuthService:
+        return AuthService(session)
+
+    return factory
 
 
 class AuthenticationError(Exception):

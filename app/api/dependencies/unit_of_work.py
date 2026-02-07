@@ -23,10 +23,10 @@ class UnitOfWork:
         self._interest_service: InterestService | None = None
 
     def _resolve(self, key: str) -> Any:
-        value = self._services[key]
-        if callable(value):
-            return value(self._session)
-        return value
+        service = self._services[key]
+        if callable(service):
+            return service(self._session)
+        return service
 
     @property
     def auth_service(self) -> AuthService:

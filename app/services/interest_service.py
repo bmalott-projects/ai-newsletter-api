@@ -2,10 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.llm.client import LLMClient, LLMServiceError
 from app.llm.schemas import InterestExtractionResult
+
+
+def interest_service_factory_provider(
+    llm_client: LLMClient,
+) -> Callable[[AsyncSession], InterestService]:
+    """Return a factory for session-scoped InterestService (closes over the given LLM client)."""
+
+    def factory(session: AsyncSession) -> InterestService:
+        return InterestService(session, llm_client)
+
+    return factory
 
 
 class InterestExtractionError(Exception):
