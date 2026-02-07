@@ -2,8 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.llm.client import LLMClient, LLMServiceError
 from app.llm.schemas import InterestExtractionResult
+
+
+def interest_service_factory_provider(
+    llm_client: LLMClient,
+) -> Callable[[AsyncSession], InterestService]:
+    """Return a factory for session-scoped InterestService (closes over the given LLM client)."""
+
+    def factory(session: AsyncSession) -> InterestService:
+        return InterestService(session, llm_client)
+
+    return factory
 
 
 class InterestExtractionError(Exception):
@@ -14,18 +29,23 @@ class InterestExtractionError(Exception):
         self.error_code = error_code
 
 
-async def extract_interests_from_prompt(
-    prompt: str, llm_client: LLMClient
-) -> InterestExtractionResult:
-    """Extract interests from a natural language prompt using LLM.
+class InterestService:
+    """Service for extracting interests from natural language prompts via LLM."""
 
-    Returns:
-        InterestExtractionResult with add_interests and remove_interests.
+    def __init__(self, session: AsyncSession, llm_client: LLMClient) -> None:
+        self._session = session
+        self._llm_client = llm_client
 
-    Raises:
-        InterestExtractionError: When the LLM layer fails (unavailable, auth, invalid response).
-    """
-    try:
-        return await llm_client.extract_interests(prompt)
-    except LLMServiceError as exc:
-        raise InterestExtractionError(str(exc), exc.error_code) from exc
+    async def extract_interests_from_prompt(self, prompt: str) -> InterestExtractionResult:
+        """Extract interests from a natural language prompt using LLM.
+
+        Returns:
+            InterestExtractionResult with add_interests and remove_interests.
+
+        Raises:
+            InterestExtractionError: When the LLM layer fails (unavailable, auth, invalid response).
+        """
+        try:
+            return await self._llm_client.extract_interests(prompt)
+        except LLMServiceError as exc:
+            raise InterestExtractionError(str(exc), exc.error_code) from exc

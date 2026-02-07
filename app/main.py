@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import types
 from importlib.metadata import PackageNotFoundError, version
 from typing import cast
 
@@ -23,6 +24,9 @@ from app.core.errors import (
 from app.core.lifespan import lifespan
 from app.core.logging import configure_logging
 from app.core.rate_limit import limiter
+from app.llm.client import OpenAIClient
+from app.services.auth_service import auth_service_factory_provider
+from app.services.interest_service import interest_service_factory_provider
 
 # Import settings - this may raise MissingRequiredSettingsError
 try:
@@ -76,6 +80,14 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_middleware(SlowAPIMiddleware)
     app.include_router(api_router, prefix="/api")
+    openai_client = OpenAIClient()
+
+    _services = {
+        "auth_service": auth_service_factory_provider(),
+        "interest_service": interest_service_factory_provider(openai_client),
+    }
+    app.state.services = types.MappingProxyType(_services)
+
     return app
 
 

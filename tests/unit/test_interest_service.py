@@ -5,6 +5,8 @@ These tests use a mocked LLM client to avoid real API calls and costs.
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from app.llm.client import (
@@ -16,7 +18,7 @@ from app.llm.client import (
 from app.llm.schemas import InterestExtractionResult
 from app.services.interest_service import (
     InterestExtractionError,
-    extract_interests_from_prompt,
+    InterestService,
 )
 
 
@@ -34,6 +36,11 @@ class MockLLMClient(LLMClient):
         return self.result
 
 
+def _mock_session() -> MagicMock:
+    """Return a mock AsyncSession for unit tests."""
+    return MagicMock()
+
+
 @pytest.mark.asyncio
 async def test_extract_interests_success() -> None:
     """Test successful interest extraction."""
@@ -42,10 +49,12 @@ async def test_extract_interests_success() -> None:
         add_interests=["Python", "FastAPI"], remove_interests=["JavaScript"]
     )
     mock_client = MockLLMClient(result=expected_result)
+    mock_session = _mock_session()
     prompt = "I'm interested in Python and FastAPI, but not JavaScript"
+    service = InterestService(session=mock_session, llm_client=mock_client)
 
     # Act
-    result = await extract_interests_from_prompt(prompt, mock_client)
+    result = await service.extract_interests_from_prompt(prompt)
 
     # Assert
     assert result == expected_result
@@ -60,10 +69,12 @@ async def test_extract_interests_empty_result() -> None:
     # Arrange
     expected_result = InterestExtractionResult()
     mock_client = MockLLMClient(result=expected_result)
+    mock_session = _mock_session()
     prompt = "No specific interests mentioned"
+    service = InterestService(session=mock_session, llm_client=mock_client)
 
     # Act
-    result = await extract_interests_from_prompt(prompt, mock_client)
+    result = await service.extract_interests_from_prompt(prompt)
 
     # Assert
     assert result == expected_result
@@ -78,10 +89,12 @@ async def test_extract_interests_only_adds() -> None:
     # Arrange
     expected_result = InterestExtractionResult(add_interests=["Machine Learning"])
     mock_client = MockLLMClient(result=expected_result)
+    mock_session = _mock_session()
     prompt = "I want to learn about machine learning"
+    service = InterestService(session=mock_session, llm_client=mock_client)
 
     # Act
-    result = await extract_interests_from_prompt(prompt, mock_client)
+    result = await service.extract_interests_from_prompt(prompt)
 
     # Assert
     assert result.add_interests == ["Machine Learning"]
@@ -95,10 +108,12 @@ async def test_extract_interests_only_removes() -> None:
     # Arrange
     expected_result = InterestExtractionResult(remove_interests=["JavaScript", "React"])
     mock_client = MockLLMClient(result=expected_result)
+    mock_session = _mock_session()
     prompt = "I'm no longer interested in JavaScript or React"
+    service = InterestService(session=mock_session, llm_client=mock_client)
 
     # Act
-    result = await extract_interests_from_prompt(prompt, mock_client)
+    result = await service.extract_interests_from_prompt(prompt)
 
     # Assert
     assert result.add_interests == []
@@ -121,10 +136,12 @@ async def test_extract_interests_raises_interest_extraction_error_on_llm_unavail
     """Service translates LLMUnavailableError to InterestExtractionError."""
     # Arrange
     mock_client = ErrorLLMClient(LLMUnavailableError("Service unavailable"))
+    mock_session = _mock_session()
+    service = InterestService(session=mock_session, llm_client=mock_client)
 
     # Act & Assert
     with pytest.raises(InterestExtractionError) as exc_info:
-        await extract_interests_from_prompt("test prompt", mock_client)
+        await service.extract_interests_from_prompt("test prompt")
     assert exc_info.value.error_code == "llm_unavailable"
     assert "unavailable" in str(exc_info.value).lower()
 
@@ -134,10 +151,12 @@ async def test_extract_interests_raises_interest_extraction_error_on_llm_auth_fa
     """Service translates LLMAuthenticationError to InterestExtractionError."""
     # Arrange
     mock_client = ErrorLLMClient(LLMAuthenticationError("Auth failed"))
+    mock_session = _mock_session()
+    service = InterestService(session=mock_session, llm_client=mock_client)
 
     # Act & Assert
     with pytest.raises(InterestExtractionError) as exc_info:
-        await extract_interests_from_prompt("test prompt", mock_client)
+        await service.extract_interests_from_prompt("test prompt")
     assert exc_info.value.error_code == "llm_auth_failed"
 
 
@@ -146,8 +165,10 @@ async def test_extract_interests_raises_interest_extraction_error_on_llm_invalid
     """Service translates LLMInvalidResponseError to InterestExtractionError."""
     # Arrange
     mock_client = ErrorLLMClient(LLMInvalidResponseError("Invalid JSON"))
+    mock_session = _mock_session()
+    service = InterestService(session=mock_session, llm_client=mock_client)
 
     # Act & Assert
     with pytest.raises(InterestExtractionError) as exc_info:
-        await extract_interests_from_prompt("test prompt", mock_client)
+        await service.extract_interests_from_prompt("test prompt")
     assert exc_info.value.error_code == "llm_response_invalid"

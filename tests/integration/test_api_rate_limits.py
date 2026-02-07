@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
 
-from app.api.interests_api import get_llm_client
+from app.api.dependencies import get_uow
 from app.api.schemas import (
     AccessTokenResponse,
     InterestExtractionRequest,
@@ -17,6 +17,7 @@ from app.api.schemas import (
 )
 from app.llm.client import LLMClient
 from app.llm.schemas import InterestExtractionResult
+from tests.conftest import uow_llm_client_override
 
 
 class MockLLMClient(LLMClient):
@@ -70,50 +71,55 @@ class TestRateLimits:
         login_response = await async_http_client.post("/api/auth/login", json=login_payload)
         token = AccessTokenResponse.model_validate(login_response.json()).access_token
 
-        async_app.dependency_overrides[get_llm_client] = lambda: MockLLMClient()
+        async_app.dependency_overrides[get_uow] = uow_llm_client_override(MockLLMClient())
+        try:
+            extract_payload = InterestExtractionRequest(prompt="Testing rate limits").model_dump()
+            statuses: list[int] = []
 
-        extract_payload = InterestExtractionRequest(prompt="Testing rate limits").model_dump()
-        statuses: list[int] = []
-        for i in range(6):
             # Act
-            response = await async_http_client.post(
+            for i in range(6):
+                response = await async_http_client.post(
+                    "/api/interests/extract",
+                    json=extract_payload,
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "X-Forwarded-For": f"10.0.0.{i + 10}",
+                    },
+                )
+                statuses.append(response.status_code)
+                if response.status_code == status.HTTP_200_OK:
+                    InterestExtractionResponse.model_validate(response.json())
+
+            # Assert
+            assert statuses[:5] == [status.HTTP_200_OK] * 5
+            assert statuses[5] == status.HTTP_429_TOO_MANY_REQUESTS
+
+            second_register = RegisterUserRequest(
+                email="limit-user-2@example.com",
+                password="password123",
+                confirm_password="password123",
+            ).model_dump()
+            await async_http_client.post("/api/auth/register", json=second_register)
+            second_login_payload = LoginUserRequest(
+                email="limit-user-2@example.com", password="password123"
+            ).model_dump()
+            second_login = await async_http_client.post(
+                "/api/auth/login", json=second_login_payload
+            )
+            second_token = AccessTokenResponse.model_validate(second_login.json()).access_token
+
+            # Act
+            second_response = await async_http_client.post(
                 "/api/interests/extract",
                 json=extract_payload,
                 headers={
-                    "Authorization": f"Bearer {token}",
-                    "X-Forwarded-For": f"10.0.0.{i + 10}",
+                    "Authorization": f"Bearer {second_token}",
+                    "X-Forwarded-For": "10.0.0.20",
                 },
             )
-            statuses.append(response.status_code)
-            if response.status_code == status.HTTP_200_OK:
-                InterestExtractionResponse.model_validate(response.json())
-        # Assert
-        assert statuses[:5] == [status.HTTP_200_OK] * 5
-        assert statuses[5] == status.HTTP_429_TOO_MANY_REQUESTS
 
-        second_register = RegisterUserRequest(
-            email="limit-user-2@example.com",
-            password="password123",
-            confirm_password="password123",
-        ).model_dump()
-        await async_http_client.post("/api/auth/register", json=second_register)
-        second_login_payload = LoginUserRequest(
-            email="limit-user-2@example.com", password="password123"
-        ).model_dump()
-        second_login = await async_http_client.post("/api/auth/login", json=second_login_payload)
-        second_token = AccessTokenResponse.model_validate(second_login.json()).access_token
-
-        # Act
-        second_response = await async_http_client.post(
-            "/api/interests/extract",
-            json=extract_payload,
-            headers={
-                "Authorization": f"Bearer {second_token}",
-                "X-Forwarded-For": "10.0.0.20",
-            },
-        )
-        # Assert
-        assert second_response.status_code == status.HTTP_200_OK
-        InterestExtractionResponse.model_validate(second_response.json())
-
-        async_app.dependency_overrides.pop(get_llm_client, None)
+            # Assert
+            assert second_response.status_code == status.HTTP_200_OK
+            InterestExtractionResponse.model_validate(second_response.json())
+        finally:
+            async_app.dependency_overrides.pop(get_uow, None)

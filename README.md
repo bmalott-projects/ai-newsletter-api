@@ -13,13 +13,50 @@ FastAPI backend for an LLM-driven tech newsletter app.
 
 Flutter client talks only to this API.
 
-- **`app/api/`**: HTTP layer (FastAPI routers). Thin: validation + JWT auth + calls services.
+- **`app/api/`**: HTTP layer (FastAPI routers). Thin: validation + JWT auth + calls services. Request-scoped wiring (e.g. Unit of Work, `get_current_user`) lives in `app/api/dependencies/`.
 - **`app/services/`**: Domain-specific business logic (user operations, interest extraction, newsletter generation). Contains business rules and orchestrates components.
 - **`app/llm/`**: LLM client abstraction + prompts + output schemas (mockable for tests).
-- **`app/core/`**: Infrastructure and cross-cutting utilities (configuration, logging, lifespan, password hashing, JWT tokens). Low-level utilities with no business rules.
+- **`app/core/`**: Infrastructure and cross-cutting utilities (configuration, logging, lifespan, password hashing, JWT tokens). Low-level utilities with no business rules. Core does not depend on services or API.
 - **`app/db/`**: SQLAlchemy models + session management.
 - **`alembic/`**: migrations (DB schema is migration-first).
 - **`tests/`**: API + service tests + (later) prompt regression tests.
+
+### Layered architecture
+
+Dependencies are unidirectional: API may depend on core, services, and db; services may depend on core; core does not depend on services or API. Logic and data flow go API → services → DB (wiring can use multiple layers; business logic and queries must not bypass the services layer). See PROJECT_CONTEXT.md for the full diagram and dependency rules.
+
+```mermaid
+flowchart TB
+    subgraph api [API Layer]
+        routes[Routes]
+        deps[Dependencies]
+        uow[UnitOfWork get_uow]
+    end
+    subgraph services [Services Layer]
+        auth_svc[AuthService]
+        interest_svc[InterestService]
+    end
+    subgraph core [Core Layer]
+        auth[auth utilities]
+        config[config]
+        errors[errors]
+        rate_limit[rate_limit]
+    end
+    subgraph db [DB Layer]
+        session[Session]
+        models[Models]
+    end
+    routes --> deps
+    routes --> uow
+    deps --> auth
+    deps --> uow
+    uow --> session
+    uow --> auth_svc
+    uow --> interest_svc
+    auth_svc --> auth
+    interest_svc --> core
+    session --> models
+```
 
 ### Core vs Services Layer
 
