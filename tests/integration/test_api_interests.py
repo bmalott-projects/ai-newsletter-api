@@ -100,6 +100,8 @@ async def test_extract_interests_success(
     assert parsed.add_interests == ["Python", "FastAPI"]
     assert parsed.remove_interests == ["JavaScript"]
 
+    async_app.dependency_overrides.pop(get_uow, None)
+
 
 @pytest.mark.asyncio
 async def test_extract_interests_requires_authentication(
@@ -156,6 +158,8 @@ async def test_extract_interests_validation_error(
     payload = response.json()
     assert payload["error"] == "validation_error"
     assert payload["message"] == "Request validation failed"
+
+    async_app.dependency_overrides.pop(get_uow, None)
 
 
 @pytest.mark.asyncio
