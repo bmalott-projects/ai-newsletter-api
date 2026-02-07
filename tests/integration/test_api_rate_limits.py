@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Callable
-
 import pytest
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, status
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import UnitOfWork, get_uow
+from app.api.dependencies import get_uow
 from app.api.schemas import (
     AccessTokenResponse,
     InterestExtractionRequest,
@@ -18,10 +15,9 @@ from app.api.schemas import (
     RegisterUserRequest,
     UserResponse,
 )
-from app.db.session import get_session_maker
 from app.llm.client import LLMClient
 from app.llm.schemas import InterestExtractionResult
-from app.services.interest_service import InterestService
+from tests.conftest import uow_llm_client_override
 
 
 class MockLLMClient(LLMClient):
@@ -29,27 +25,6 @@ class MockLLMClient(LLMClient):
 
     async def extract_interests(self, prompt: str) -> InterestExtractionResult:
         return InterestExtractionResult()
-
-
-def _uow_override(llm_client: LLMClient) -> Callable[[Request], AsyncGenerator[UnitOfWork, None]]:
-    """Return a get_uow dependency override that injects InterestService(session, llm_client)."""
-
-    def interest_service_factory(session: AsyncSession) -> InterestService:
-        return InterestService(session, llm_client)
-
-    async def override(request: Request) -> AsyncGenerator[UnitOfWork, None]:
-        session_maker = get_session_maker()
-        async with session_maker() as session:
-            services = dict(request.app.state.services)
-            services["interest_service"] = interest_service_factory
-            try:
-                yield UnitOfWork(session, services)
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
-
-    return override
 
 
 class TestRateLimits:
@@ -96,7 +71,7 @@ class TestRateLimits:
         login_response = await async_http_client.post("/api/auth/login", json=login_payload)
         token = AccessTokenResponse.model_validate(login_response.json()).access_token
 
-        async_app.dependency_overrides[get_uow] = _uow_override(MockLLMClient())
+        async_app.dependency_overrides[get_uow] = uow_llm_client_override(MockLLMClient())
 
         extract_payload = InterestExtractionRequest(prompt="Testing rate limits").model_dump()
         statuses: list[int] = []

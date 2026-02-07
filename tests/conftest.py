@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
 from typing import cast
 from urllib.parse import urlparse
 
 import pytest
 import pytest_asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from pydantic import PostgresDsn
@@ -21,10 +21,34 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.api.dependencies import UnitOfWork
 from app.core import config
 from app.core.rate_limit import limiter
 from app.db.base import Base
+from app.db.session import get_session_maker
+from app.llm.client import LLMClient
 from app.main import create_app
+from app.services.interest_service import interest_service_factory_provider
+
+
+def uow_llm_client_override(
+    llm_client: LLMClient,
+) -> Callable[[Request], AsyncGenerator[UnitOfWork, None]]:
+    """Return a get_uow dependency override that injects InterestService(session, llm_client)."""
+
+    async def override(request: Request) -> AsyncGenerator[UnitOfWork, None]:
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            services = dict(request.app.state.services)
+            services["interest_service"] = interest_service_factory_provider(llm_client)
+            try:
+                yield UnitOfWork(session, services)
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    return override
 
 
 def _get_test_database_url() -> str:
