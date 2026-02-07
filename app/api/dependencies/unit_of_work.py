@@ -32,18 +32,14 @@ class UnitOfWork:
     def auth_service(self) -> AuthService:
         """Session-scoped auth service."""
         if self._auth_service is None:
-            resolved = cast(AuthService, self._resolve("auth_service"))
-            self._auth_service = resolved
-            return resolved
+            self._auth_service = cast(AuthService, self._resolve("auth_service"))
         return self._auth_service
 
     @property
     def interest_service(self) -> InterestService:
         """Session-scoped interest service."""
         if self._interest_service is None:
-            resolved = cast(InterestService, self._resolve("interest_service"))
-            self._interest_service = resolved
-            return resolved
+            self._interest_service = cast(InterestService, self._resolve("interest_service"))
         return self._interest_service
 
 
