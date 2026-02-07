@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from typing import Any, cast
 
 from fastapi import Request
@@ -16,7 +16,7 @@ from app.services.interest_service import InterestService
 class UnitOfWork:
     """Holds the request's session and exposes session-scoped services from the registry."""
 
-    def __init__(self, session: AsyncSession, services: dict[str, Any]) -> None:
+    def __init__(self, session: AsyncSession, services: Mapping[str, Any]) -> None:
         self._session = session
         self._services = services
         self._auth_service: AuthService | None = None

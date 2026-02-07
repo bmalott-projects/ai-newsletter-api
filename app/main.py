@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import types
 from importlib.metadata import PackageNotFoundError, version
 from typing import cast
 
@@ -81,10 +82,11 @@ def create_app() -> FastAPI:
     app.include_router(api_router, prefix="/api")
     openai_client = OpenAIClient()
 
-    app.state.services = {
+    _services = {
         "auth_service": auth_service_factory_provider(),
         "interest_service": interest_service_factory_provider(openai_client),
     }
+    app.state.services = types.MappingProxyType(_services)
 
     return app
 
